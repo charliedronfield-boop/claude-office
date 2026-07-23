@@ -11,12 +11,14 @@ import {
   X,
   ChevronDown,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR as dateFnsPtBR, es as dateFnsEs } from "date-fns/locale";
 import { GitStatusPanel } from "@/components/layout/GitStatusPanel";
 import { EventLog } from "@/components/layout/EventLog";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useNavigationStore } from "@/stores/navigationStore";
 import type { Session } from "@/hooks/useSessions";
 
 // ============================================================================
@@ -93,6 +95,10 @@ export function MobileDrawer({
   onClearDB,
 }: MobileDrawerProps): React.ReactNode {
   const { t, language } = useTranslation();
+  const goToMulti = useNavigationStore((s) => s.goToMulti);
+  const activeSessionCount = sessions.filter(
+    (s) => s.status === "active",
+  ).length;
   const dateFnsLocale =
     language === "pt-BR"
       ? dateFnsPtBR
@@ -125,6 +131,21 @@ export function MobileDrawer({
 
   const handleClearDB = (): void => {
     onClearDB();
+    onClose();
+  };
+
+  const handleGoToMulti = (): void => {
+    goToMulti();
+    onClose();
+  };
+
+  // Selecting a session should always land on that session's single office
+  // view — mirrors CommandCenterView's handleDrillIn (goToSingle() after
+  // onSessionSelect), needed here now that the drawer can be reached from
+  // "multi" view too, not just "single".
+  const selectSession = (id: string): void => {
+    useNavigationStore.getState().goToSingle();
+    onSessionSelect(id);
     onClose();
   };
 
@@ -175,6 +196,19 @@ export function MobileDrawer({
               <Trash2 size={16} />
               {t("header.clearDb")}
             </button>
+            {/* LOCAL PATCH: Multi Office — every active session's agents
+                together (desktop-only Command Center has no mobile entry
+                point today; this one does, since phone/LAN viewing is the
+                primary use case this was built for). */}
+            {activeSessionCount >= 2 && (
+              <button
+                onClick={handleGoToMulti}
+                className="flex items-center gap-2 px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 text-violet-500 border border-violet-500/30 rounded text-sm font-bold transition-colors"
+              >
+                <Users size={16} />
+                {t("header.multiOffice")}
+              </button>
+            )}
           </div>
 
           {/* Sessions Panel */}
@@ -220,15 +254,11 @@ export function MobileDrawer({
                             ? "bg-purple-500/20 border-l-2 border-purple-500"
                             : "hover:bg-slate-800/50"
                         }`}
-                        onClick={() => {
-                          onSessionSelect(primary.id);
-                          onClose();
-                        }}
+                        onClick={() => selectSession(primary.id)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            onSessionSelect(primary.id);
-                            onClose();
+                            selectSession(primary.id);
                           }
                         }}
                       >
@@ -293,15 +323,11 @@ export function MobileDrawer({
                                     ? "bg-purple-500/20 border-l-2 border-purple-500"
                                     : "hover:bg-slate-800/50"
                                 }`}
-                                onClick={() => {
-                                  onSessionSelect(session.id);
-                                  onClose();
-                                }}
+                                onClick={() => selectSession(session.id)}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter" || e.key === " ") {
                                     e.preventDefault();
-                                    onSessionSelect(session.id);
-                                    onClose();
+                                    selectSession(session.id);
                                   }
                                 }}
                               >

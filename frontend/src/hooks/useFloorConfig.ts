@@ -3,7 +3,17 @@
 import { useEffect } from "react";
 import { useNavigationStore } from "@/stores/navigationStore";
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1`;
+// LOCAL PATCH: derive from window.location.hostname (like useWebSocketEvents.ts
+// and utils/api.ts) instead of a hardcoded "localhost", so this works both
+// when viewed via localhost and via the Mac's LAN IP (phone/another device).
+function getApiUrl(): string {
+  const base =
+    process.env.NEXT_PUBLIC_API_URL ||
+    (typeof window !== "undefined"
+      ? `http://${window.location.hostname}:8000`
+      : "http://localhost:8000");
+  return `${base}/api/v1`;
+}
 
 /**
  * Fetches building configuration from the backend and stores it
@@ -17,7 +27,7 @@ export function useFloorConfig(): void {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`${API_URL}/floors`)
+    fetch(`${getApiUrl()}/floors`)
       .then((res) => res.json())
       .then((data) => {
         // Backend returns camelCase (Pydantic to_camel alias)

@@ -357,6 +357,7 @@ export type RoomId4 = string | null;
 export type NotificationType1 = string | null;
 export type ErrorType1 = string | null;
 export type Reason1 = string | null;
+export type Lastupdated1 = string;
 export type Sessionid1 = string;
 export type Bucket = "needs_you" | "working" | "done";
 export type Currenttask2 = string | null;
@@ -364,7 +365,7 @@ export type Tododone = number;
 export type Todototal = number;
 export type Subagentcount = number;
 export type Entries = OverviewEntry[];
-export type Lastupdated1 = string;
+export type Lastupdated2 = string;
 /**
  * Visual states for the boss's phone.
  *
@@ -969,6 +970,23 @@ export interface LifecycleEventData {
   [k: string]: unknown;
 }
 /**
+ * Full per-session game state for every active session.
+ *
+ * Broadcast over ``/ws/multi``, keyed by session id so the frontend can
+ * render (and diff) each session's agents independently.
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "MultiSessionState".
+ */
+export interface MultiSessionState {
+  sessions?: Sessions;
+  lastUpdated: Lastupdated1;
+  [k: string]: unknown;
+}
+export interface Sessions {
+  [k: string]: GameState;
+}
+/**
  * A single session's boss snapshot for the Command Center.
  *
  * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
@@ -992,7 +1010,7 @@ export interface OverviewEntry {
  */
 export interface OverviewState {
   entries?: Entries;
-  lastUpdated: Lastupdated1;
+  lastUpdated: Lastupdated2;
   [k: string]: unknown;
 }
 /**

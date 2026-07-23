@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 from app.models.agents import Agent, AgentState, BossState, OfficeState
 from app.models.common import TodoStatus
+from app.models.multi_session import MultiSessionState
 from app.models.overview import OverviewBucket, OverviewEntry, OverviewState
 from app.models.sessions import GameState, KanbanTask, WhiteboardData
 
@@ -340,3 +341,24 @@ def build_overview(sessions: dict[str, StateMachine]) -> OverviewState:
             )
         )
     return OverviewState(entries=entries, last_updated=datetime.now(UTC))
+
+
+# ----------------------------------------------------------------------
+# Multi-session office (LOCAL PATCH — full detail, cross-session)
+# ----------------------------------------------------------------------
+
+
+def build_multi_state(sessions: dict[str, StateMachine]) -> MultiSessionState:
+    """Build full per-session game state for every active session.
+
+    Unlike ``build_overview`` (boss-only summaries for the Command Center),
+    this carries each session's complete ``GameState`` — boss AND subagents,
+    desks, queues — so the multi-session office view can render every live
+    session's agents together. Mirrors ``build_overview``'s snapshot pattern:
+    the caller holds ``_sessions_lock``, and ``sm.to_game_state`` reads each
+    StateMachine's own already-snapshotted collections.
+    """
+    sessions_state: dict[str, GameState] = {
+        session_id: sm.to_game_state(session_id) for session_id, sm in list(sessions.items())
+    }
+    return MultiSessionState(sessions=sessions_state, last_updated=datetime.now(UTC))

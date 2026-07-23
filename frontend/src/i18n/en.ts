@@ -19,6 +19,7 @@ const en = {
   "header.agents": "agents",
   "header.tour": "TOUR",
   "header.commandCenter": "COMMAND",
+  "header.multiOffice": "MULTI",
   "header.more": "MORE",
   "header.moreMenu": "More actions",
   "help.tour": "Take the Tour",

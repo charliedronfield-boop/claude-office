@@ -21,6 +21,7 @@ const ptBR: Record<TranslationKey, string> = {
   "header.agents": "agentes",
   "header.tour": "TUR",
   "header.commandCenter": "COMANDO",
+  "header.multiOffice": "MULTI",
   "header.more": "MAIS",
   "header.moreMenu": "Mais ações",
   "help.tour": "Fazer o tour",

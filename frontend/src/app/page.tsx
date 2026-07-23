@@ -44,6 +44,7 @@ import { ViewTransition } from "@/components/navigation/ViewTransition";
 import { BuildingView } from "@/components/views/BuildingView";
 import { FloorView } from "@/components/views/FloorView";
 import { CommandCenterView } from "@/components/command/CommandCenterView";
+import { MultiOfficeView } from "@/components/multi/MultiOfficeView";
 import { TourOverlay } from "@/components/tour/TourOverlay";
 import CommandBar from "@/components/attention/CommandBar";
 import AttentionToasts from "@/components/attention/AttentionToasts";
@@ -482,7 +483,17 @@ export default function V2TestPage(): React.ReactNode {
       {/* ----------------------------------------------------------------
           Main Content
       ---------------------------------------------------------------- */}
-      {isMobile ? (
+      {isMobile && view === "multi" ? (
+        /* LOCAL PATCH: Multi Office on mobile — see MobileDrawer's entry
+           point above; unlike the other mobile branch below, this ignores
+           `boss`/MobileAgentActivity since it's cross-session, not
+           single-session. */
+        <div className="flex-grow flex flex-col gap-1.5 overflow-hidden min-h-0">
+          <div className="flex-grow border border-slate-800 rounded-lg shadow-2xl bg-slate-900 overflow-hidden relative min-h-0">
+            <MultiOfficeView enabled={view === "multi"} />
+          </div>
+        </div>
+      ) : isMobile ? (
         <div className="flex-grow flex flex-col gap-1.5 overflow-hidden min-h-0">
           <div className="flex-[3] border border-slate-800 rounded-lg shadow-2xl bg-slate-900 overflow-hidden relative min-h-0">
             <OfficeGame />
@@ -532,6 +543,20 @@ export default function V2TestPage(): React.ReactNode {
           onDeleteSession={setSessionPendingDelete}
           onRenameSession={handleRenameSession}
         />
+      ) : view === "multi" ? (
+        /* ----------------------------------------------------------------
+            LOCAL PATCH: Multi Office — every active session's agents
+            together in one tiled office (full detail, not just boss
+            summaries — see components/multi/MultiOfficeView.tsx)
+        ---------------------------------------------------------------- */
+        <div className="flex-grow flex gap-2 overflow-hidden min-h-0">
+          <div
+            data-tour-id="multi-office-canvas"
+            className="flex-grow border border-slate-800 rounded-lg shadow-2xl bg-slate-900 overflow-hidden relative"
+          >
+            <MultiOfficeView enabled={view === "multi"} />
+          </div>
+        </div>
       ) : (
         /* ----------------------------------------------------------------
             Building / Floor View (animated transitions)

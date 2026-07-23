@@ -25,6 +25,7 @@ from app.core.beads_poller import get_beads_poller, has_beads, init_beads_poller
 from app.core.broadcast_service import (
     broadcast_error,
     broadcast_event,
+    broadcast_multi_state,
     broadcast_overview_state,
     broadcast_room_state,
     broadcast_state,
@@ -70,6 +71,7 @@ from app.models.events import (
     TaskEvent,
     ToolEvent,
 )
+from app.models.multi_session import MultiSessionState
 from app.models.overview import OverviewState
 from app.models.sessions import ConversationEntry, GameState, HistoryEntry
 from app.services.git_service import git_service
@@ -193,6 +195,11 @@ class EventProcessor:
         # per event (O(N x events/sec)). See ``_schedule_overview_broadcast``.
         self._overview_flush_task: asyncio.Task[None] | None = None
         self._overview_flush_interval = 0.05  # 50 ms debounce window
+        # LOCAL PATCH: same debounce pattern as overview, for the full-detail
+        # multi-session office feed (see ``_schedule_multi_broadcast``). A
+        # separate task/interval so the two feeds can't block each other.
+        self._multi_flush_task: asyncio.Task[None] | None = None
+        self._multi_flush_interval = 0.05  # 50 ms debounce window
         # Single source of truth for post-broadcast async enrichment.
         #
         # The sync mutation of every event type runs through
@@ -647,6 +654,9 @@ class EventProcessor:
         # event. No-op when no one is watching /ws/overview.
         # ------------------------------------------------------------------
         self._schedule_overview_broadcast()
+        # LOCAL PATCH: same idea, for the full-detail multi-session feed.
+        # No-op when no one is watching /ws/multi.
+        self._schedule_multi_broadcast()
 
     # ------------------------------------------------------------------
     # Command Center overview (debounced cross-session broadcast)
@@ -677,17 +687,44 @@ class EventProcessor:
         except Exception as e:
             logger.exception(f"Error broadcasting overview state: {e}")
 
-    async def shutdown(self) -> None:
-        """Cancel a pending debounced overview broadcast on app shutdown.
+    # ------------------------------------------------------------------
+    # Multi-session office (LOCAL PATCH — debounced full-detail broadcast)
+    # ------------------------------------------------------------------
 
-        Without this the flush task is left pending at loop close and asyncio
-        logs "Task was destroyed but it is pending!".
+    def _schedule_multi_broadcast(self) -> None:
+        """Coalesce multi-session broadcasts into one deferred flush per ~50 ms.
+
+        Mirrors ``_schedule_overview_broadcast`` exactly, against the separate
+        ``multi_connections`` pool and ``_multi_flush_task``, so the two feeds'
+        debounce windows can't interfere with each other.
         """
-        task = self._overview_flush_task
-        if task is not None and not task.done():
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
+        if not get_manager().multi_connections:
+            return
+        if self._multi_flush_task is not None and not self._multi_flush_task.done():
+            return
+        self._multi_flush_task = asyncio.create_task(self._flush_multi_broadcast())
+
+    async def _flush_multi_broadcast(self) -> None:
+        """Wait out the debounce window, then broadcast full multi-session state."""
+        try:
+            await asyncio.sleep(self._multi_flush_interval)
+            await broadcast_multi_state(self.sessions, self._sessions_lock)
+        except asyncio.CancelledError:  # pragma: no cover - shutdown path
+            raise
+        except Exception as e:
+            logger.exception(f"Error broadcasting multi-session state: {e}")
+
+    async def shutdown(self) -> None:
+        """Cancel pending debounced broadcasts (overview + multi) on app shutdown.
+
+        Without this the flush tasks are left pending at loop close and
+        asyncio logs "Task was destroyed but it is pending!".
+        """
+        for task in (self._overview_flush_task, self._multi_flush_task):
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
 
     async def build_overview_snapshot(self) -> OverviewState:
         """Build a cross-session overview under ``_sessions_lock``.
@@ -700,6 +737,18 @@ class EventProcessor:
 
         async with self._sessions_lock:
             return build_overview(self.sessions)
+
+    async def build_multi_snapshot(self) -> MultiSessionState:
+        """Build full per-session game state under ``_sessions_lock``.
+
+        LOCAL PATCH. Used by the ``/ws/multi`` connect path, mirroring
+        ``build_overview_snapshot`` exactly but returning every session's
+        complete ``GameState`` instead of boss-only summaries.
+        """
+        from app.core.room_orchestrator import build_multi_state
+
+        async with self._sessions_lock:
+            return build_multi_state(self.sessions)
 
     # ------------------------------------------------------------------
     # DB helpers

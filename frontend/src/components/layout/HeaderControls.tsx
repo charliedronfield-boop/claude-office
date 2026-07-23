@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, HelpCircle, Settings, Bell, LayoutGrid } from "lucide-react";
+import { Activity, HelpCircle, Settings, Bell, LayoutGrid, Users } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useNavigationStore } from "@/stores/navigationStore";
 import { useAttentionStore, selectUnreadCount } from "@/stores/attentionStore";
@@ -51,6 +51,7 @@ export function HeaderControls({
   const { t } = useTranslation();
   const view = useNavigationStore((s) => s.view);
   const goToCommand = useNavigationStore((s) => s.goToCommand);
+  const goToMulti = useNavigationStore((s) => s.goToMulti);
   const unreadCount = useAttentionStore(selectUnreadCount);
   const openCommandBar = useAttentionStore((s) => s.openCommandBar);
 
@@ -82,6 +83,23 @@ export function HeaderControls({
         >
           <LayoutGrid size={14} />
           {t("header.commandCenter")}
+        </button>
+      )}
+
+      {/* LOCAL PATCH: Multi Office — every session's agents together in one
+          tiled office (not just boss summaries, unlike Command Center) */}
+      {activeSessionCount >= 2 && (
+        <button
+          onClick={goToMulti}
+          title="Multi Office"
+          className={`flex items-center gap-2 px-3 py-1.5 border rounded text-xs font-bold transition-colors ${
+            view === "multi"
+              ? "bg-violet-500/20 text-violet-400 border-violet-500/30"
+              : "bg-violet-500/10 text-violet-500 border-violet-500/30 hover:bg-violet-500/20"
+          }`}
+        >
+          <Users size={14} />
+          {t("header.multiOffice")}
         </button>
       )}
 

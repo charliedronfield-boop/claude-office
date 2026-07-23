@@ -24,6 +24,7 @@ __all__ = [
     "broadcast_error",
     "broadcast_room_state",
     "broadcast_overview_state",
+    "broadcast_multi_state",
 ]
 
 
@@ -134,5 +135,34 @@ async def broadcast_overview_state(
             "type": "state_update",
             "timestamp": overview.last_updated.isoformat(),
             "state": overview.model_dump(mode="json", by_alias=True),
+        }
+    )
+
+
+async def broadcast_multi_state(
+    sessions: dict[str, StateMachine],
+    sessions_lock: asyncio.Lock | None = None,
+) -> None:
+    """Broadcast full per-session game state to all ``/ws/multi`` clients.
+
+    LOCAL PATCH. Mirrors ``broadcast_overview_state`` exactly (same
+    skip-when-unwatched guard, same lock-holding contract), but carries each
+    session's complete ``GameState`` (boss AND subagents) via
+    ``build_multi_state`` instead of the boss-only ``OverviewEntry`` summary.
+    """
+    if not get_manager().multi_connections:
+        return
+    from app.core.room_orchestrator import build_multi_state
+
+    if sessions_lock is not None:
+        async with sessions_lock:
+            multi = build_multi_state(sessions)
+    else:
+        multi = build_multi_state(sessions)
+    await get_manager().broadcast_multi(
+        {
+            "type": "state_update",
+            "timestamp": multi.last_updated.isoformat(),
+            "state": multi.model_dump(mode="json", by_alias=True),
         }
     )

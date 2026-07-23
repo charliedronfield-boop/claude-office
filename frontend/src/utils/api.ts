@@ -4,10 +4,27 @@
  * The backend no longer returns the API key over HTTP (SEC-001). Instead the
  * key is delivered out-of-band via a ?token= launch URL printed to the server
  * console; initApiKeyFromBrowser captures it into sessionStorage.
+ *
+ * LOCAL PATCH: the API base now derives from window.location.hostname at
+ * call time (matching useWebSocketEvents.ts's existing WS URL logic) instead
+ * of a hardcoded "localhost". A static NEXT_PUBLIC_API_URL still wins when
+ * set, but nothing needs to be pinned to one LAN IP: viewed via localhost
+ * (Mac's own display, or a second monitor on the same Mac) it correctly
+ * stays on localhost, and viewed via the Mac's LAN IP (a phone, another
+ * device on the network) it correctly follows to that IP too. Pinning
+ * NEXT_PUBLIC_API_URL to a single LAN IP previously broke localhost viewers
+ * on this same Mac, since connecting to your own machine's external-facing
+ * IP from itself isn't always reliable (firewall/VPN-dependent "hairpin"
+ * routing).
  */
 
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function getApiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window !== "undefined") {
+    return `http://${window.location.hostname}:8000`;
+  }
+  return "http://localhost:8000";
+}
 
 const KEY_STORAGE = "claude-office-api-key";
 
@@ -61,5 +78,5 @@ export async function apiFetch(
   if (_apiKey) {
     headers.set("X-API-Key", _apiKey);
   }
-  return fetch(`${API_BASE}${path}`, { ...init, headers });
+  return fetch(`${getApiBase()}${path}`, { ...init, headers });
 }

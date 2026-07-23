@@ -6,7 +6,10 @@
  */
 
 /** Current view mode */
-export type ViewMode = "single" | "building" | "floor" | "command";
+// LOCAL PATCH: "multi" shows every active session's agents together in one
+// tiled office (see components/multi/MultiOfficeView.tsx) — distinct from
+// "command" (Command Center), which only shows boss-level summaries.
+export type ViewMode = "single" | "building" | "floor" | "command" | "multi";
 
 /** Sentinel floor ID for the lobby (unmatched sessions) */
 export const LOBBY_FLOOR_ID = "__lobby__";

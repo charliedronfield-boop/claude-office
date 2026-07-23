@@ -28,6 +28,10 @@ class ConnectionManager:
         self.active_connections: dict[str, list[WebSocket]] = {}
         self.room_connections: dict[str, list[WebSocket]] = {}
         self.overview_connections: list[WebSocket] = []
+        # LOCAL PATCH: separate pool for the full-detail multi-session feed
+        # (see connect_multi/broadcast_multi below), independent of
+        # overview_connections so it can't affect Command Center.
+        self.multi_connections: list[WebSocket] = []
         self._lock = asyncio.Lock()
 
     # ------------------------------------------------------------------
@@ -216,6 +220,49 @@ class ConnectionManager:
             async with self._lock:
                 self.overview_connections[:] = [
                     conn for conn in self.overview_connections if id(conn) not in failed_ids
+                ]
+
+    # ------------------------------------------------------------------
+    # Multi-session-level WebSocket support (LOCAL PATCH — full-detail,
+    # cross-session office view). Mirrors the overview group above exactly,
+    # as a separate connection pool, so it can't interfere with Command
+    # Center's existing boss-only feed.
+    # ------------------------------------------------------------------
+
+    async def connect_multi(self, websocket: WebSocket, *, max_connections: int) -> bool:
+        """Accept a WebSocket connection and register it for the multi-session feed.
+
+        Returns False (without accepting) when adding the connection would
+        exceed ``max_connections``, checked atomically with registration under
+        the lock (same TOCTOU-closing pattern as ``connect_overview``).
+        """
+        async with self._lock:
+            if len(self.multi_connections) >= max_connections:
+                return False
+            await websocket.accept()
+            self.multi_connections.append(websocket)
+            return True
+
+    async def disconnect_multi(self, websocket: WebSocket) -> None:
+        """Remove a WebSocket connection from the multi-session feed."""
+        async with self._lock:
+            if websocket in self.multi_connections:
+                self.multi_connections.remove(websocket)
+
+    async def broadcast_multi(self, message: dict[str, Any]) -> None:
+        """Send a message to all WebSocket clients on the multi-session feed."""
+        async with self._lock:
+            connections = self.multi_connections.copy()
+
+        if not connections:
+            return
+
+        failed = await self._broadcast_to_connections(message, connections, label="multi")
+        if failed:
+            failed_ids = {id(conn) for conn in failed}
+            async with self._lock:
+                self.multi_connections[:] = [
+                    conn for conn in self.multi_connections if id(conn) not in failed_ids
                 ]
 
 

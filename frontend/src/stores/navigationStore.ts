@@ -38,6 +38,8 @@ interface NavigationActions {
   goToFloor: (floorId: string) => void;
   /** Navigate to the Command Center (cross-terminal overview) */
   goToCommand: () => void;
+  /** LOCAL PATCH: navigate to the Multi Office view (every session's agents, together) */
+  goToMulti: () => void;
   /** Navigate to the single office view (keeps building config for back-nav) */
   goToSingle: () => void;
   /** Set building config from API (auto-switches to building view if floors exist) */
@@ -96,6 +98,17 @@ export const useNavigationStore = create<NavigationStore>()((set, get) => ({
   goToCommand: () =>
     set({
       view: "command",
+      floorId: null,
+      transitionDirection: null,
+      isTransitioning: false,
+      transitionOrigin: null,
+    }),
+
+  // LOCAL PATCH: Multi Office view, same no-transition treatment as Command
+  // Center (both render outside the building/floor ViewTransition flow).
+  goToMulti: () =>
+    set({
+      view: "multi",
       floorId: null,
       transitionDirection: null,
       isTransitioning: false,
