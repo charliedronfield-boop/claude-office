@@ -110,6 +110,19 @@ class Settings(BaseSettings):
     # Useful in development; disable for shared/production deployments (SEC-006).
     LOG_RICH_TRACEBACKS: bool = True
 
+    # Gates the LAN-viewing widening added in ccb85b3 ("Add Multi Office view
+    # and enable LAN viewing"): with this False (the default), read-only GET
+    # requests (LocalhostOnlyMiddleware) and WebSocket connections
+    # (_is_local_ws_host) are loopback-only regardless of what interface the
+    # server process is bound to. Set to true only on a trusted home network,
+    # to view the office from a phone/other device on the same Wi-Fi — and
+    # prefer setting it back to false when done, rather than relying on the
+    # bind address alone to keep the API off the LAN. Defense in depth: this
+    # setting and the server's --host bind are two independent gates on the
+    # same exposure, so a future change to either one alone doesn't silently
+    # reopen it.
+    CLAUDE_OFFICE_ALLOW_LAN_VIEW: bool = False
+
     @property
     def effective_api_key(self) -> str:
         """Return the configured API key, or the per-launch auto-generated token."""

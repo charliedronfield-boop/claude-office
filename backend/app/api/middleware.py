@@ -7,13 +7,17 @@ either an explicit user-configured key or the per-launch auto-generated
 token (SEC-001 / SEC-002 / SEC-006). Logic is unchanged from the prior
 inline version in ``main.py``.
 
-LOCAL PATCH: ``LocalhostOnlyMiddleware`` additionally allows read-only (GET)
-requests from the user's own private network (RFC1918), so the visualizer
-can be viewed from a phone on the same home Wi-Fi. State-changing requests
-(POST/PUT/PATCH/DELETE) — including subprocess execution and clipboard
-writes — still require true loopback regardless of network origin. This is
-a deliberate, scoped widening for a trusted home LAN, not a fix upstream;
-do not carry it forward to a shared/untrusted network.
+LOCAL PATCH: ``LocalhostOnlyMiddleware`` can additionally allow read-only
+(GET) requests from the user's own private network (RFC1918), so the
+visualizer can be viewed from a phone on the same home Wi-Fi. This is gated
+behind ``settings.CLAUDE_OFFICE_ALLOW_LAN_VIEW`` (default ``False``) — off
+by default regardless of what interface the server is bound to, so a future
+``--host 0.0.0.0`` doesn't silently reopen this on its own; both the setting
+and the bind address have to agree to actually expose anything. State-
+changing requests (POST/PUT/PATCH/DELETE) — including subprocess execution
+and clipboard writes — always require true loopback regardless of network
+origin or this setting. Do not carry the widening forward to a
+shared/untrusted network even with the setting on.
 """
 
 import hmac
@@ -37,8 +41,10 @@ def _is_private_network_host(host: str) -> bool:
     """True if *host* is a private-network (LAN) IP address.
 
     Covers RFC1918 (10/8, 172.16/12, 192.168/16) plus link-local/ULA ranges
-    via ``ipaddress``'s ``is_private``. Used only to widen read-only (GET)
-    access for LAN viewing — never applied to state-changing requests.
+    via ``ipaddress``'s ``is_private``. Pure IP classification only — does
+    NOT check ``CLAUDE_OFFICE_ALLOW_LAN_VIEW``; callers gate on the setting
+    themselves (see ``LocalhostOnlyMiddleware.dispatch``) so this stays a
+    simple, independently testable predicate.
 
     Excludes the unspecified address (0.0.0.0 / ::) even though ``is_private``
     counts it as private — it's a bind-any-interface meta address, never a
@@ -75,6 +81,7 @@ class LocalhostOnlyMiddleware(BaseHTTPMiddleware):
         if (
             request.method == "GET"
             and client_host is not None
+            and settings.CLAUDE_OFFICE_ALLOW_LAN_VIEW
             and _is_private_network_host(client_host)
         ):
             return await call_next(request)

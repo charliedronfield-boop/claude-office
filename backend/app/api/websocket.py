@@ -30,18 +30,26 @@ _VALID_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,128}$")
 # these hosts so a CORS-config change can never widen the WS trust boundary
 # beyond the local machine (QA-014).
 #
-# LOCAL PATCH: the filter below (``_is_local_ws_host``) additionally accepts
-# private-network (RFC1918) hostnames, so the WS stream — which only ever
-# carries read-only visualization data — can reach a phone on the same home
-# Wi-Fi. This is a deliberate, scoped widening from "loopback only" to "this
-# trusted LAN only"; it still cannot reach beyond the local private network,
-# preserving the QA-014 property in spirit. Do not carry forward to a
-# shared/untrusted network.
+# LOCAL PATCH: the filter below (``_is_local_ws_host``) can additionally
+# accept private-network (RFC1918) hostnames, so the WS stream — which only
+# ever carries read-only visualization data — can reach a phone on the same
+# home Wi-Fi. Gated behind ``settings.CLAUDE_OFFICE_ALLOW_LAN_VIEW`` (default
+# ``False``) — the same switch that gates the HTTP-side widening in
+# ``app/api/middleware.py``, so enabling/disabling LAN viewing is one setting,
+# not two independent code paths that can drift. Off by default regardless of
+# the server's bind address. Even when on, it still cannot reach beyond the
+# local private network, preserving the QA-014 property in spirit — do not
+# carry forward to a shared/untrusted network.
 _LOCALHOST_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
 def _is_local_ws_host(hostname: str | None) -> bool:
-    """True if *hostname* is loopback or a private-network (LAN) address.
+    """True if *hostname* is loopback, or (when LAN viewing is enabled) a
+    private-network (LAN) address.
+
+    Loopback is always accepted. The private-network branch is gated behind
+    ``settings.CLAUDE_OFFICE_ALLOW_LAN_VIEW`` — see the module-level LOCAL
+    PATCH note above.
 
     Excludes the unspecified address (0.0.0.0 / ::) even though Python's
     ``is_private`` counts it as private: it's a bind-any-interface meta
@@ -52,6 +60,11 @@ def _is_local_ws_host(hostname: str | None) -> bool:
     if hostname in _LOCALHOST_HOSTS:
         return True
     if hostname is None:
+        return False
+
+    from app.config import get_settings
+
+    if not get_settings().CLAUDE_OFFICE_ALLOW_LAN_VIEW:
         return False
     try:
         ip = ipaddress.ip_address(hostname)
