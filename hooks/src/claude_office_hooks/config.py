@@ -68,6 +68,14 @@ API_URL = _resolve_api_url(
 _api_key_holder: list[str] = [""]
 TIMEOUT = 0.5  # Seconds — keep short so hooks never block Claude
 
+# How long the PermissionRequest hook will hold the connection open on
+# GET /permissions/{id}/wait, giving a human time to click Approve/Deny in
+# the office UI. This is the ONE hook allowed to block for a while — every
+# other hook keeps the 0.5s TIMEOUT above. The installed hook's own
+# settings.json timeout (manage_hooks.py) must be a bit longer than this so
+# Claude Code doesn't kill the process before it gets a response.
+PERMISSION_WAIT_TIMEOUT = float(os.environ.get("CLAUDE_OFFICE_PERMISSION_TIMEOUT", "110"))
+
 
 def get_api_key() -> str:
     """Return the current API key (may be empty string before load_config)."""

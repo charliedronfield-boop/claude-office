@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { format } from "date-fns";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ShieldCheck, ShieldX } from "lucide-react";
 import {
   useIssuesStore,
   selectOpenIssues,
@@ -24,6 +24,7 @@ import {
   SEVERITY_ICONS,
 } from "@/components/game/issueStyles";
 import { useTranslation } from "@/hooks/useTranslation";
+import { decidePermission } from "@/systems/permissionsApi";
 
 const MAX_RESOLVED_SHOWN = 20;
 
@@ -94,10 +95,22 @@ export function IssuesPanel() {
 function IssueCard({ issue, onClick }: { issue: Issue; onClick: () => void }) {
   const { t } = useTranslation();
   const resolved = issue.resolvedAt !== null;
+  const resolveIssue = useIssuesStore((s) => s.resolveIssue);
   const actor =
     issue.agentId === "main" || !issue.agentId
       ? t("issues.boss")
       : (issue.agentName ?? issue.agentId);
+  const canDecide = !resolved && issue.kind === "needs_approval" && !!issue.toolUseId;
+
+  const handleQuickDecide = (
+    e: React.MouseEvent,
+    decision: "allow" | "deny",
+  ) => {
+    e.stopPropagation();
+    if (!issue.toolUseId) return;
+    resolveIssue(issue.id);
+    void decidePermission(issue.toolUseId, decision);
+  };
 
   return (
     <div
@@ -123,9 +136,28 @@ function IssueCard({ issue, onClick }: { issue: Issue; onClick: () => void }) {
         <span className="text-slate-100 font-bold text-[11px] truncate">
           {issue.title}
         </span>
-        <span className="ml-auto text-slate-500 flex-shrink-0">
-          {format(issue.createdAt, "HH:mm:ss")}
-        </span>
+        {canDecide ? (
+          <span className="ml-auto flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={(e) => handleQuickDecide(e, "deny")}
+              title={t("issues.deny")}
+              className="p-1 rounded bg-red-900/60 hover:bg-red-700 text-red-200"
+            >
+              <ShieldX size={11} />
+            </button>
+            <button
+              onClick={(e) => handleQuickDecide(e, "allow")}
+              title={t("issues.approve")}
+              className="p-1 rounded bg-emerald-900/60 hover:bg-emerald-600 text-emerald-200"
+            >
+              <ShieldCheck size={11} />
+            </button>
+          </span>
+        ) : (
+          <span className="ml-auto text-slate-500 flex-shrink-0">
+            {format(issue.createdAt, "HH:mm:ss")}
+          </span>
+        )}
       </div>
       <div
         className="text-slate-400 text-[10px] truncate"

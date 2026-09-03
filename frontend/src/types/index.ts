@@ -111,6 +111,7 @@ export interface EventDetail {
   notificationType?: string;
   nativeAgentId?: string;
   backgroundTaskStatus?: string;
+  toolUseId?: string;
 }
 
 /**

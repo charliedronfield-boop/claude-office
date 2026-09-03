@@ -19,6 +19,7 @@ function issue(overrides: Partial<Issue> = {}): Issue {
     agentName: "Editor",
     toolName: "Bash",
     toolInput: null,
+    toolUseId: null,
     eventType: "post_tool_use",
     createdAt: 1,
     resolvedAt: null,

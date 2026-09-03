@@ -20,7 +20,7 @@ The hooks package bridges Claude Code and the visualizer:
 
 - **Event Capture**: Intercepts Claude Code lifecycle events (tool use, prompts, sessions)
 - **Event Mapping**: Transforms raw hook data into backend-compatible event payloads
-- **Silent Operation**: Never outputs to stdout/stderr to avoid disrupting Claude
+- **Silent Operation**: Never outputs to stdout/stderr to avoid disrupting Claude, with one deliberate exception (see [Approve/Deny from the office UI](#approvedeny-from-the-office-ui))
 - **Fail-Safe**: Always exits with code 0 to prevent blocking Claude actions
 
 ## Architecture
@@ -119,6 +119,12 @@ CLAUDE_OFFICE_DEBUG=0
 # (here or as an environment variable — env wins), the hook sends it as
 # X-API-Key on every event POST.
 # CLAUDE_OFFICE_API_KEY=
+
+# How long (seconds) the PermissionRequest hook waits for a human to click
+# Approve/Deny in the office UI before giving up silently. Must stay well
+# under the hook's own settings.json timeout (manage_hooks.py adds 20s of
+# headroom automatically when you set this before running install.sh).
+# CLAUDE_OFFICE_PERMISSION_TIMEOUT=110
 ```
 
 | Variable | Default | Description |
@@ -128,6 +134,7 @@ CLAUDE_OFFICE_DEBUG=0
 | `CLAUDE_OFFICE_API_URL` | `http://localhost:8000/api/v1/events` | Backend event endpoint. Non-localhost values are reset to the default unless `CLAUDE_OFFICE_ALLOW_REMOTE=1`. |
 | `CLAUDE_OFFICE_ALLOW_REMOTE` | `0` | Set to `1` to permit a non-localhost backend (e.g. a remote/dedicated server). Off by default since event payloads carry tool I/O and file paths. |
 | `CLAUDE_OFFICE_API_KEY` | (empty) | API key sent as `X-API-Key`. Required when the backend sets an explicit `CLAUDE_OFFICE_API_KEY`; env var takes precedence over the config file. |
+| `CLAUDE_OFFICE_PERMISSION_TIMEOUT` | `110` | Seconds the `PermissionRequest` hook waits for an Approve/Deny click before giving up silently. Set this **before** running `install.sh` — it also drives that hook's own `settings.json` timeout (`+20s` headroom). |
 
 ### Strip Prefixes
 
@@ -167,6 +174,26 @@ Or edit the config file and restart Claude Code.
 | `Stop` | `stop` | Boss completing |
 | `PreCompact` | `context_compaction` | Trigger compaction animation |
 | `SubagentStart` | `subagent_info` | Update agent with native ID |
+
+### Approve/Deny from the office UI
+
+`PermissionRequest` is the one hook that doesn't fire-and-forget. After
+POSTing the usual `permission_request` event, it makes a second call —
+`GET /api/v1/permissions/{tool_use_id}/wait?timeout=<CLAUDE_OFFICE_PERMISSION_TIMEOUT>`
+— and holds the connection open. Clicking **Approve** or **Deny** on that
+request's card in the office's Issues panel calls
+`POST /api/v1/permissions/{tool_use_id}/decide`, which wakes the waiting
+hook up; the hook then prints Claude Code's `PermissionRequest` decision
+JSON to stdout (the *only* place this package ever writes to stdout) and
+exits.
+
+This can only make Claude Code's own prompt disappear early with an actual
+answer — it can never make one appear where there wasn't one, and it can
+never silently allow anything. Every failure mode (nobody clicks in time,
+the backend is unreachable, the printed JSON doesn't match what your Claude
+Code version expects) degrades to exactly today's behavior: the normal
+interactive terminal prompt. If you never see the office UI update your
+decision, the terminal prompt is always still the source of truth.
 
 ### Event Data Mapping
 

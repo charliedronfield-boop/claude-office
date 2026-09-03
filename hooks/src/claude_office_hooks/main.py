@@ -29,7 +29,13 @@ try:
     import urllib.request
     from typing import Any, cast
 
-    from claude_office_hooks.config import API_URL, TIMEOUT, get_api_key, load_config
+    from claude_office_hooks.config import (
+        API_URL,
+        PERMISSION_WAIT_TIMEOUT,
+        TIMEOUT,
+        get_api_key,
+        load_config,
+    )
     from claude_office_hooks.debug_logger import debug_log
     from claude_office_hooks.event_mapper import map_event
 
@@ -45,8 +51,12 @@ try:
     _config = load_config()
     DEBUG = _config.get("CLAUDE_OFFICE_DEBUG", "0") == "1"
 
-    def _open_request(req: "urllib.request.Request") -> Any:
+    def _open_request(req: "urllib.request.Request", timeout: float = TIMEOUT) -> Any:
         """Open *req* without ever creating an SSL context for http URLs.
+
+        *timeout* defaults to the fast fire-and-forget TIMEOUT (0.5s); the
+        PermissionRequest wait call passes a much longer one explicitly —
+        it is the one deliberate exception to "hooks never block".
 
         On some Windows setups the bundled OpenSSL aborts the whole process
         (``OPENSSL_Uplink: no OPENSSL_Applink``) the moment an SSL context is
@@ -66,7 +76,7 @@ try:
         ``HTTPSHandler``, which would re-trigger the context creation.
         """
         if API_URL.lower().startswith("https"):
-            return urllib.request.urlopen(req, timeout=TIMEOUT)
+            return urllib.request.urlopen(req, timeout=timeout)
         opener = urllib.request.OpenerDirector()
         for handler in (
             urllib.request.ProxyHandler(),
@@ -76,7 +86,7 @@ try:
             urllib.request.HTTPErrorProcessor(),
         ):
             opener.add_handler(handler)
-        return opener.open(req, timeout=TIMEOUT)
+        return opener.open(req, timeout=timeout)
 
     def send_event(payload: dict[str, Any]) -> None:
         """POST *payload* as JSON to the backend API.
@@ -99,6 +109,68 @@ try:
         except Exception as exc:
             # Record the failure but never disrupt the user (always swallow).
             log_error(exc, "send_event failed")
+
+    def _permissions_base_url() -> str:
+        """Derive the /permissions base from API_URL (which ends in /events)."""
+        if API_URL.endswith("/events"):
+            return API_URL[: -len("/events")] + "/permissions"
+        return API_URL.rstrip("/") + "/../permissions"
+
+    def _print_permission_decision(decision: str, reason: str | None) -> None:
+        """Print Claude Code's PermissionRequest decision JSON to real stdout.
+
+        This is the one place this hook ever writes to stdout — everything
+        else in this module is deliberately silent (see the module
+        docstring). Best-effort against a partially-documented schema: if
+        the field names below don't match what a given Claude Code version
+        expects, the JSON is simply ignored and the normal interactive
+        prompt happens, exactly as if this hook did nothing.
+        """
+        real_stdout = sys.__stdout__
+        if real_stdout is None:
+            return
+        payload = {
+            "hookSpecificOutput": {
+                "hookEventName": "PermissionRequest",
+                "permissionDecision": decision,
+                "permissionDecisionReason": reason or f"{decision} from the Claude Office UI",
+            }
+        }
+        real_stdout.write(json.dumps(payload))
+        real_stdout.flush()
+
+    def _wait_for_permission_decision(raw_data: dict[str, Any]) -> None:
+        """Block briefly for a human decision from the office UI, then print it.
+
+        Only called for the PermissionRequest hook. Every failure mode here
+        (no tool_use_id, network error, backend down, malformed response,
+        nobody decides before PERMISSION_WAIT_TIMEOUT) results in printing
+        nothing, which leaves Claude Code's normal interactive permission
+        prompt completely unaffected — see permission_gate.py's docstring.
+        """
+        tool_use_id = raw_data.get("tool_use_id")
+        if not tool_use_id:
+            return
+        try:
+            base = _permissions_base_url()
+            url = f"{base}/{tool_use_id}/wait?timeout={PERMISSION_WAIT_TIMEOUT}"
+            headers: dict[str, str] = {}
+            api_key = get_api_key()
+            if api_key:
+                headers["X-API-Key"] = api_key
+            req = urllib.request.Request(url, headers=headers, method="GET")
+            # A bit longer than the server-side wait (network + processing
+            # slack), but still comfortably under the hook's own configured
+            # process timeout (manage_hooks.py's _PERMISSION_HOOK_TIMEOUT).
+            with _open_request(req, timeout=PERMISSION_WAIT_TIMEOUT + 10) as response:
+                if response.status >= 300:
+                    return
+                body = json.loads(response.read().decode("utf-8"))
+            decision = body.get("decision")
+            if decision in ("allow", "deny"):
+                _print_permission_decision(decision, body.get("reason"))
+        except Exception as exc:
+            log_error(exc, "permission wait failed")
 
     def main() -> None:
         """Parse arguments, read stdin, map the event, and POST to backend."""
@@ -181,6 +253,13 @@ try:
 
         debug_log(args.event_type, raw_data, payload, enabled=DEBUG)
         send_event(payload)
+
+        # The one deliberate exception to "hooks never block": give a human
+        # a chance to Approve/Deny from the office UI before Claude Code's
+        # normal interactive prompt takes over. See the module docstring on
+        # _wait_for_permission_decision for the safety property.
+        if args.event_type == "permission_request":
+            _wait_for_permission_decision(raw_data)
 
     if __name__ == "__main__":
         try:

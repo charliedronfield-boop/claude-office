@@ -6,7 +6,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { X, TerminalSquare, Copy, CheckCircle2 } from "lucide-react";
+import {
+  X,
+  TerminalSquare,
+  Copy,
+  CheckCircle2,
+  ShieldCheck,
+  ShieldX,
+} from "lucide-react";
 import { format } from "date-fns";
 import type { Issue } from "@/systems/issueClassifier";
 import { useIssuesStore } from "@/stores/issuesStore";
@@ -18,6 +25,7 @@ import {
 } from "@/stores/gameStore";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getRoomForDesk } from "@/systems/officeRooms";
+import { decidePermission } from "@/systems/permissionsApi";
 import { SEVERITY_BADGE_CLASSES, SEVERITY_ICONS } from "./issueStyles";
 
 interface IssueDetailModalProps {
@@ -32,6 +40,7 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
   const focusAgentTerminal = useAttentionStore((s) => s.focusAgentTerminal);
   const resolveIssue = useIssuesStore((s) => s.resolveIssue);
   const [copied, setCopied] = useState(false);
+  const [deciding, setDeciding] = useState<"allow" | "deny" | null>(null);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -79,7 +88,19 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
     onClose();
   };
 
+  const handleDecide = async (decision: "allow" | "deny") => {
+    if (!issue.toolUseId || deciding) return;
+    setDeciding(decision);
+    // Optimistic: the office UI's own answer is authoritative for this
+    // card the moment it's clicked, regardless of whether the hook process
+    // is still there to pick it up (see permissionsApi.ts).
+    resolveIssue(issue.id);
+    await decidePermission(issue.toolUseId, decision);
+    onClose();
+  };
+
   const isOpen = issue.resolvedAt === null;
+  const canDecide = isOpen && issue.kind === "needs_approval" && !!issue.toolUseId;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -131,6 +152,12 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
             </div>
           </Section>
 
+          {canDecide && (
+            <div className="text-slate-500 text-[10px] leading-relaxed italic">
+              {t("issues.decideHint")}
+            </div>
+          )}
+
           <Section label={t("issues.agent")}>
             <div className="text-blue-300 text-[12px]">
               {actorLabel}
@@ -161,6 +188,26 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
 
         {/* Footer */}
         <div className="flex-shrink-0 px-4 py-3 border-t border-slate-700 bg-slate-950 flex flex-wrap gap-2 justify-end">
+          {canDecide && (
+            <>
+              <button
+                onClick={() => void handleDecide("deny")}
+                disabled={deciding !== null}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold rounded transition-colors"
+              >
+                <ShieldX size={13} />
+                {t("issues.deny")}
+              </button>
+              <button
+                onClick={() => void handleDecide("allow")}
+                disabled={deciding !== null}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold rounded transition-colors"
+              >
+                <ShieldCheck size={13} />
+                {t("issues.approve")}
+              </button>
+            </>
+          )}
           <button
             onClick={handleOpenTerminal}
             disabled={!sessionId}

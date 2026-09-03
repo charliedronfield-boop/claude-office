@@ -34,6 +34,8 @@ export interface Issue {
   agentName: string | null;
   toolName: string | null;
   toolInput: Record<string, unknown> | null;
+  /** Set on needs_approval issues — lets the UI call POST /permissions/{id}/decide. */
+  toolUseId: string | null;
   eventType: EventType;
   createdAt: number;
   resolvedAt: number | null;
@@ -84,6 +86,7 @@ function build(
     agentName: actor.agentName,
     toolName: detail.toolName ?? null,
     toolInput: detail.toolInput ?? null,
+    toolUseId: detail.toolUseId ?? null,
     eventType: event.type,
     createdAt: event.timestamp
       ? new Date(event.timestamp).getTime()

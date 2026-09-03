@@ -49,6 +49,7 @@ from app.core.handlers import (
     handle_user_prompt_submit,
 )
 from app.core.jsonl_parser import get_last_assistant_response
+from app.core.permission_gate import get_permission_gate
 from app.core.product_mapper import get_product_mapper
 from app.core.room_orchestrator import RoomOrchestrator
 from app.core.state_machine import StateMachine
@@ -534,6 +535,23 @@ class EventProcessor:
 
         sm.transition(event)
 
+        # Register a waiter for the office UI's Approve/Deny buttons. The
+        # hook process that raised this PermissionRequest may be blocked on
+        # GET /permissions/{tool_use_id}/wait right now (see
+        # hooks/src/claude_office_hooks/main.py); this makes the request
+        # visible to that wait and to POST .../decide.
+        if event.event_type == EventType.PERMISSION_REQUEST:
+            assert isinstance(event, ToolEvent)
+            if event.data.tool_use_id:
+                character = sm.resolve_character(event.data.agent_id, event.data.native_agent_id)
+                get_permission_gate().register(
+                    tool_use_id=event.data.tool_use_id,
+                    session_id=event.session_id,
+                    agent_id=character,
+                    tool_name=event.data.tool_name,
+                    tool_input=event.data.tool_input,
+                )
+
         # Apply resolved floor/room to in-memory state machine.
         if resolved_floor_id:
             sm.floor_id = resolved_floor_id
@@ -570,6 +588,7 @@ class EventProcessor:
             ("background_task_status", "backgroundTaskStatus"),
             ("to", "to"),
             ("message_text", "messageText"),
+            ("tool_use_id", "toolUseId"),
         ]:
             val = getattr(event.data, src, None)
             if val is not None:

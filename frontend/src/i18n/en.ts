@@ -139,6 +139,10 @@ const en = {
   "issues.severity.critical": "Critical",
   "issues.severity.high": "High",
   "issues.severity.low": "Low",
+  "issues.approve": "Approve",
+  "issues.deny": "Deny",
+  "issues.decideHint":
+    "Approve/Deny answers the prompt directly if it's still waiting on you; otherwise use Open Terminal.",
 
   // Event Log
   "eventLog.title": "Event Log",

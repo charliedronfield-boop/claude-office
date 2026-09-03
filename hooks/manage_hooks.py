@@ -75,6 +75,17 @@ def save_settings(path: Path, settings: dict[str, Any]) -> None:
     os.replace(tmp, path)
 
 
+# Every hook is fire-and-forget except PermissionRequest, which blocks
+# waiting for a human to click Approve/Deny in the office UI (see
+# app/core/permission_gate.py + claude_office_hooks/main.py). Its timeout
+# must comfortably exceed PERMISSION_WAIT_TIMEOUT in config.py (default
+# 110s) so Claude Code doesn't kill the process before the office UI can
+# answer. Override with CLAUDE_OFFICE_PERMISSION_TIMEOUT at install time to
+# match a custom PERMISSION_WAIT_TIMEOUT.
+_DEFAULT_TIMEOUT = 2  # Seconds — every fire-and-forget hook.
+_PERMISSION_HOOK_TIMEOUT = int(os.environ.get("CLAUDE_OFFICE_PERMISSION_TIMEOUT", "110")) + 20
+
+
 def create_hook_config(hook_cmd: str, hook_type: str) -> dict[str, Any]:
     """Create the hook configuration dictionary.
 
@@ -85,10 +96,11 @@ def create_hook_config(hook_cmd: str, hook_type: str) -> dict[str, Any]:
     # Convert PascalCase to snake_case for the event type argument
     event_type = convert_camel_to_snake(hook_type)
 
+    timeout = _PERMISSION_HOOK_TIMEOUT if hook_type == "PermissionRequest" else _DEFAULT_TIMEOUT
     config = {
         "type": "command",
         "command": f"{hook_cmd} {event_type}",
-        "timeout": 2,  # Seconds
+        "timeout": timeout,
     }
 
     # Wrap in the structure expected by Claude Code
@@ -119,14 +131,20 @@ def create_hook_config(hook_cmd: str, hook_type: str) -> dict[str, Any]:
 
 
 def is_same_hook(entry1: dict[str, Any], entry2: dict[str, Any]) -> bool:
-    """Check if two hook entries are effectively the same."""
-    # Simple comparison of command path
+    """Check if two hook entries invoke the same command (ignoring timeout)."""
     try:
         cmd1 = entry1.get("hooks", [])[0].get("command")
         cmd2 = entry2.get("hooks", [])[0].get("command")
         return cmd1 == cmd2
     except (IndexError, AttributeError):
         return False
+
+
+def _entry_timeout(entry: dict[str, Any]) -> int | None:
+    try:
+        return entry.get("hooks", [])[0].get("timeout")
+    except (IndexError, AttributeError):
+        return None
 
 
 def install_hooks(hook_cmd: str, dry_run: bool = False):
@@ -146,13 +164,27 @@ def install_hooks(hook_cmd: str, dry_run: bool = False):
 
     for hook_type in HOOK_TYPES:
         new_entry = create_hook_config(hook_cmd, hook_type)
+        new_timeout = _entry_timeout(new_entry)
         event_type = convert_camel_to_snake(hook_type)
 
         current_list = hooks_config.get(hook_type, [])
 
-        # Check for duplicates
-        if any(is_same_hook(existing, new_entry) for existing in current_list):
-            print(f"  [Skip] {hook_type}: Hook already exists.")
+        # Same command already installed — update its timeout in place if
+        # the desired value has changed (e.g. PermissionRequest's timeout
+        # was bumped so it can wait on the office UI), rather than skipping
+        # it outright or appending a duplicate that would fire twice.
+        existing_index = next(
+            (i for i, existing in enumerate(current_list) if is_same_hook(existing, new_entry)),
+            None,
+        )
+        if existing_index is not None:
+            if _entry_timeout(current_list[existing_index]) != new_timeout:
+                print(f"  [Update] {hook_type}: timeout -> {new_timeout}s")
+                current_list[existing_index] = new_entry
+                hooks_config[hook_type] = current_list
+                changes_made = True
+            else:
+                print(f"  [Skip] {hook_type}: Hook already exists.")
             continue
 
         print(f"  [Add]  {hook_type}: {hook_cmd} {event_type}")

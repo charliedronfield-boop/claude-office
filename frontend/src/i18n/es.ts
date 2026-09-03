@@ -141,6 +141,10 @@ const es: Record<TranslationKey, string> = {
   "issues.severity.critical": "Crítico",
   "issues.severity.high": "Alto",
   "issues.severity.low": "Bajo",
+  "issues.approve": "Aprobar",
+  "issues.deny": "Denegar",
+  "issues.decideHint":
+    "Aprobar/Denegar responde directamente si la solicitud sigue esperando; si no, usa Abrir terminal.",
 
   // Event Log
   "eventLog.title": "Registro de Eventos",

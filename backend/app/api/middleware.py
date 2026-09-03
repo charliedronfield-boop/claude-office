@@ -102,16 +102,24 @@ def _is_state_changing(path: str, method: str) -> bool:
     """Return True if the request targets a destructive or side-effecting endpoint.
 
     Covers global destructive operations (clearing all sessions, running a
-    simulation) and per-session OS side effects (terminal activation + clipboard
-    write via ``/focus``). Other per-session mutations remain open in the default
-    configuration and are fully gated when an explicit key is set (handled by
-    ``settings.has_explicit_key`` in the middleware).
+    simulation), per-session OS side effects (terminal activation + clipboard
+    write via ``/focus``), and deciding a pending tool-permission request
+    (``/permissions/{tool_use_id}/decide`` — this is a real approve/deny of a
+    tool call, not a view). Other per-session mutations remain open in the
+    default configuration and are fully gated when an explicit key is set
+    (handled by ``settings.has_explicit_key`` in the middleware).
     """
-    prefix = settings.API_V1_STR + "/sessions"
+    sessions_prefix = settings.API_V1_STR + "/sessions"
+    permissions_prefix = settings.API_V1_STR + "/permissions"
     return (
-        (path == prefix and method == "DELETE")
-        or (path == f"{prefix}/simulate" and method == "POST")
-        or (path.startswith(f"{prefix}/") and path.endswith("/focus") and method == "POST")
+        (path == sessions_prefix and method == "DELETE")
+        or (path == f"{sessions_prefix}/simulate" and method == "POST")
+        or (path.startswith(f"{sessions_prefix}/") and path.endswith("/focus") and method == "POST")
+        or (
+            path.startswith(f"{permissions_prefix}/")
+            and path.endswith("/decide")
+            and method == "POST"
+        )
     )
 
 

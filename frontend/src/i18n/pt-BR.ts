@@ -141,6 +141,10 @@ const ptBR: Record<TranslationKey, string> = {
   "issues.severity.critical": "Crítico",
   "issues.severity.high": "Alto",
   "issues.severity.low": "Baixo",
+  "issues.approve": "Aprovar",
+  "issues.deny": "Negar",
+  "issues.decideHint":
+    "Aprovar/Negar responde diretamente se o pedido ainda estiver esperando; caso contrário, use Abrir terminal.",
 
   // Event Log
   "eventLog.title": "Log de Eventos",

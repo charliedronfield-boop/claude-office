@@ -35,6 +35,7 @@ export function useStuckAgentWatch(): void {
             agentName: agent.name,
             toolName: null,
             toolInput: null,
+            toolUseId: null,
             eventType: "agent_update",
             createdAt: now,
             resolvedAt: null,

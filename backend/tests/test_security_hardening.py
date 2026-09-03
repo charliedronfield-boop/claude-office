@@ -478,6 +478,49 @@ class TestStateChangingEndpointAuth:
         finally:
             settings.CLAUDE_OFFICE_API_KEY = original
 
+    def test_permission_decide_requires_key(self) -> None:
+        """POST /permissions/{id}/decide should require the effective API key.
+
+        This endpoint actually approves/denies a real tool call, so it must
+        be gated exactly like /focus and /sessions/simulate.
+        """
+        from app.main import app
+
+        settings = get_settings()
+        original = settings.CLAUDE_OFFICE_API_KEY
+        settings.CLAUDE_OFFICE_API_KEY = ""
+        try:
+            client = TestClient(app)
+            resp = client.post(
+                f"{settings.API_V1_STR}/permissions/does_not_matter/decide",
+                json={"decision": "allow"},
+            )
+            assert resp.status_code == 401
+        finally:
+            settings.CLAUDE_OFFICE_API_KEY = original
+
+    def test_permission_wait_is_a_read_only_view(self) -> None:
+        """GET /permissions/{id}/wait is read-only and needs no key by default.
+
+        It only ever reports a decision someone else already made through
+        the gated /decide endpoint — it cannot itself approve or deny
+        anything, so it follows the same open-by-default GET policy as
+        every other read endpoint.
+        """
+        from app.main import app
+
+        settings = get_settings()
+        original = settings.CLAUDE_OFFICE_API_KEY
+        settings.CLAUDE_OFFICE_API_KEY = ""
+        try:
+            client = TestClient(app)
+            resp = client.get(
+                f"{settings.API_V1_STR}/permissions/does_not_matter/wait?timeout=0.05"
+            )
+            assert resp.status_code != 401
+        finally:
+            settings.CLAUDE_OFFICE_API_KEY = original
+
     def test_read_only_endpoints_open_without_key(self) -> None:
         """GET endpoints should still work without a key."""
         from app.main import app

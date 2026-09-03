@@ -87,6 +87,7 @@ describe("classifyIssue", () => {
       event("permission_request", {
         toolName: "Bash",
         toolInput: { command: "rm -rf build" },
+        toolUseId: "tu_42",
       }),
       actor,
     );
@@ -94,7 +95,16 @@ describe("classifyIssue", () => {
       kind: "needs_approval",
       severity: "critical",
       description: "rm -rf build",
+      toolUseId: "tu_42",
     });
+  });
+
+  it("carries no toolUseId when the event has none", () => {
+    const issue = classifyIssue(
+      event("post_tool_use", { toolName: "Bash", success: false }),
+      actor,
+    );
+    expect(issue?.toolUseId).toBeNull();
   });
 
   it("only turns actionable notifications into issues", () => {
