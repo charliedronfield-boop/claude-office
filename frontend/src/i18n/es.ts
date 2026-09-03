@@ -118,6 +118,29 @@ const es: Record<TranslationKey, string> = {
   // Right Sidebar
   "sidebar.events": "Eventos",
   "sidebar.conversation": "Conversación",
+  "sidebar.issues": "Problemas",
+
+  // Issues panel
+  "issues.title": "Problemas",
+  "issues.openCount": "{count} abiertos",
+  "issues.openCount_one": "{count} abierto",
+  "issues.openCount_other": "{count} abiertos",
+  "issues.empty": "Sin problemas — la oficina funciona sin contratiempos.",
+  "issues.resolved": "Resueltos",
+  "issues.whatHappened": "Qué pasó",
+  "issues.suggestedFix": "Solución sugerida",
+  "issues.agent": "Quién",
+  "issues.boss": "Claude (jefe)",
+  "issues.tool": "Herramienta",
+  "issues.toolInput": "Entrada de la herramienta",
+  "issues.openTerminal": "Abrir terminal",
+  "issues.copyError": "Copiar error",
+  "issues.copied": "¡Copiado!",
+  "issues.markFixed": "Marcar como resuelto",
+  "issues.resolvedAt": "Resuelto a las",
+  "issues.severity.critical": "Crítico",
+  "issues.severity.high": "Alto",
+  "issues.severity.low": "Bajo",
 
   // Event Log
   "eventLog.title": "Registro de Eventos",

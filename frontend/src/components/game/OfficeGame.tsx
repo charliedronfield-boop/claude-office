@@ -98,6 +98,8 @@ import { LoadingScreen } from "./LoadingScreen";
 import { OfficeBackground } from "./OfficeBackground";
 import { RoomWalls } from "./RoomWalls";
 import { MeetingTable } from "./MeetingTable";
+import { IssueMarker } from "./IssueMarker";
+import { useIssuesStore, selectOpenIssueAgentIds } from "@/stores/issuesStore";
 
 // Register PixiJS components
 extend({ Container, Text, Graphics, Sprite });
@@ -216,6 +218,7 @@ export function OfficeGame(): ReactNode {
   // Subscribe to store state
   const agents = useGameStore(useShallow(selectAgents));
   const boss = useGameStore(selectBoss);
+  const issueAgentIds = useIssuesStore(useShallow(selectOpenIssueAgentIds));
   const todos = useGameStore(selectTodos);
   const debugMode = useGameStore(selectDebugMode);
   const showPaths = useGameStore(selectShowPaths);
@@ -666,6 +669,29 @@ export function OfficeGame(): ReactNode {
                         position={agent.currentPosition}
                       />
                     ))}
+
+                  {/* Open-issue markers over the characters that need attention */}
+                  {issueAgentIds.map((agentId) => {
+                    if (agentId === "main") {
+                      return (
+                        <IssueMarker
+                          key="issue-main"
+                          position={boss.position}
+                          yOffset={-84}
+                        />
+                      );
+                    }
+                    const agent = agents.get(agentId);
+                    if (!agent || isInElevatorZone(agent.currentPosition)) {
+                      return null;
+                    }
+                    return (
+                      <IssueMarker
+                        key={`issue-${agentId}`}
+                        position={agent.currentPosition}
+                      />
+                    );
+                  })}
 
                   {/* Character Type Overlays - crown/badge/dot per agent type */}
                   {Array.from(agents.values())

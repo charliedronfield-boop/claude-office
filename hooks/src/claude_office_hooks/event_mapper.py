@@ -302,6 +302,85 @@ def _handle_notification(raw_data: dict[str, Any], data: dict[str, Any]) -> None
     data["message"] = raw_data.get("message")
 
 
+def _attach_native_agent(raw_data: dict[str, Any], data: dict[str, Any]) -> None:
+    """Carry the subagent id Claude Code adds when a hook fires inside a subagent."""
+    native_agent_id = raw_data.get("agent_id")
+    if native_agent_id:
+        data["native_agent_id"] = native_agent_id
+
+
+_ERROR_TEXT_MAX_LEN = 500
+
+
+def _extract_error_text(raw_data: dict[str, Any]) -> str | None:
+    """Best-effort error text from a failure hook payload.
+
+    The failure hooks are not tightly specified, so look in the usual places:
+    top-level ``error``/``message``/``reason``, then the tool response.
+    """
+    candidates: list[Any] = [raw_data.get(key) for key in ("error", "message", "reason")]
+    response = raw_data.get("tool_response")
+    if isinstance(response, dict):
+        typed_response = cast(dict[str, Any], response)
+        candidates.extend(typed_response.get(key) for key in ("error", "message", "content"))
+    else:
+        candidates.append(response)
+
+    for value in candidates:
+        if isinstance(value, str) and value.strip():
+            return value.strip()[:_ERROR_TEXT_MAX_LEN]
+    return None
+
+
+def _handle_post_tool_use_failure(
+    raw_data: dict[str, Any],
+    payload: dict[str, Any],
+    data: dict[str, Any],
+) -> None:
+    """Map a PostToolUseFailure hook to a failed post_tool_use event."""
+    payload["event_type"] = "post_tool_use"
+    tool_name = raw_data.get("tool_name")
+    data["tool_name"] = tool_name
+    data["tool_input"] = raw_data.get("tool_input")
+    data["success"] = False
+    data["error_type"] = "tool_failure"
+    data["message"] = _extract_error_text(raw_data) or f"{tool_name or 'Tool'} failed"
+    data["agent_id"] = "main"
+    _attach_native_agent(raw_data, data)
+
+
+def _handle_permission_denied(
+    raw_data: dict[str, Any],
+    payload: dict[str, Any],
+    data: dict[str, Any],
+) -> None:
+    """Map a PermissionDenied hook (auto mode refused a tool) to an error event."""
+    payload["event_type"] = "error"
+    tool_name = raw_data.get("tool_name")
+    data["error_type"] = "permission_denied"
+    data["tool_name"] = tool_name
+    data["tool_input"] = raw_data.get("tool_input")
+    data["reason"] = raw_data.get("reason")
+    data["message"] = (
+        _extract_error_text(raw_data) or f"Permission denied for {tool_name or 'tool'}"
+    )
+    data["agent_id"] = "main"
+    _attach_native_agent(raw_data, data)
+
+
+def _handle_stop_failure(
+    raw_data: dict[str, Any],
+    payload: dict[str, Any],
+    data: dict[str, Any],
+) -> None:
+    """Map a StopFailure hook (turn ended with an API error) to an error event."""
+    payload["event_type"] = "error"
+    data["error_type"] = "stop_failure"
+    data["message"] = _extract_error_text(raw_data) or "Claude stopped with an error"
+    data["agent_id"] = "main"
+    _attach_native_agent(raw_data, data)
+
+
 def _handle_session_end(raw_data: dict[str, Any], data: dict[str, Any]) -> None:
     """Populate *data* for a session_end event."""
     data["reason"] = raw_data.get("reason")
@@ -380,6 +459,15 @@ def map_event(
 
     elif event_type == "post_tool_use":
         _handle_post_tool_use(raw_data, payload, data, transcript_path)
+
+    elif event_type == "post_tool_use_failure":
+        _handle_post_tool_use_failure(raw_data, payload, data)
+
+    elif event_type == "permission_denied":
+        _handle_permission_denied(raw_data, payload, data)
+
+    elif event_type == "stop_failure":
+        _handle_stop_failure(raw_data, payload, data)
 
     elif event_type == "subagent_start":
         result = _handle_native_subagent_start(raw_data, payload, data, transcript_path)

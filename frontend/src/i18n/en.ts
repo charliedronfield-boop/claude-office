@@ -116,6 +116,29 @@ const en = {
   // Right Sidebar
   "sidebar.events": "Events",
   "sidebar.conversation": "Conversation",
+  "sidebar.issues": "Issues",
+
+  // Issues panel
+  "issues.title": "Issues",
+  "issues.openCount": "{count} open",
+  "issues.openCount_one": "{count} open",
+  "issues.openCount_other": "{count} open",
+  "issues.empty": "No problems — the office is running smoothly.",
+  "issues.resolved": "Resolved",
+  "issues.whatHappened": "What happened",
+  "issues.suggestedFix": "Suggested fix",
+  "issues.agent": "Who",
+  "issues.boss": "Claude (boss)",
+  "issues.tool": "Tool",
+  "issues.toolInput": "Tool input",
+  "issues.openTerminal": "Open terminal",
+  "issues.copyError": "Copy error",
+  "issues.copied": "Copied!",
+  "issues.markFixed": "Mark fixed",
+  "issues.resolvedAt": "Resolved at",
+  "issues.severity.critical": "Critical",
+  "issues.severity.high": "High",
+  "issues.severity.low": "Low",
 
   // Event Log
   "eventLog.title": "Event Log",

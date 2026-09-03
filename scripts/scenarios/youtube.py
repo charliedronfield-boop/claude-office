@@ -5,7 +5,10 @@ Exercises the role-based office:
 2. Four subagents are spawned with YouTube ``agent_type`` values so each one
    is routed into its own room (Scripting, Editing, Thumbnails & SEO,
    Publishing).
-3. Agents work for a while with realistic tool calls, then finish.
+3. Agents work with realistic tool calls and long quiet stretches (so idle
+   wandering kicks in), and each hits one realistic hiccup — a failed tool,
+   a permission prompt, a question for the user, a blocked write — so the
+   Issues panel has something to show.
 4. Session ends.
 """
 
@@ -70,6 +73,51 @@ TOOLS: dict[str, list[tuple[str, dict[str, str]]]] = {
 }
 
 
+def _hiccup(ctx: SimulationContext, agent_id: str, agent_name: str) -> None:
+    """Fire one realistic problem for *agent_id* so the Issues panel lights up."""
+    if agent_id == "yt_editor":
+        tool_input = {"command": "ffmpeg -i cut.mp4 -c:v libx265 final.mp4"}
+        ctx.send_event(
+            "pre_tool_use",
+            {"tool_name": "Bash", "tool_input": tool_input, "agent_id": agent_id},
+        )
+        time.sleep(4)
+        ctx.log(f"[{agent_name}] ffmpeg failed")
+        ctx.send_event(
+            "post_tool_use",
+            {
+                "tool_name": "Bash",
+                "tool_input": tool_input,
+                "agent_id": agent_id,
+                "success": False,
+                "error_type": "tool_failure",
+                "message": "ffmpeg exited with code 1: Unknown encoder 'libx265'",
+            },
+        )
+    elif agent_id == "yt_publisher":
+        ctx.log(f"[{agent_name}] waiting for permission to upload")
+        ctx.send_event(
+            "permission_request",
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "yt upload --schedule 'Fri 16:00' mastered.mp4"},
+                "agent_id": agent_id,
+            },
+        )
+        time.sleep(20)
+    elif agent_id == "yt_thumbs":
+        ctx.log(f"[{agent_name}] needs an answer from the user")
+        ctx.send_event(
+            "notification",
+            {
+                "notification_type": "agent_needs_input",
+                "message": "Which thumbnail style should lead: bold text or face close-up?",
+                "agent_id": agent_id,
+            },
+        )
+        time.sleep(20)
+
+
 def _agent_workflow(
     ctx: SimulationContext,
     agent_id: str,
@@ -96,7 +144,7 @@ def _agent_workflow(
     # Give the arrival choreography time to seat the agent in its room.
     time.sleep(25 + start_delay)
 
-    for tool_name, tool_input in TOOLS[agent_id]:
+    for index, (tool_name, tool_input) in enumerate(TOOLS[agent_id]):
         tokens = ctx.increment_context(
             input_delta=random.randint(1500, 3000),
             output_delta=random.randint(500, 1500),
@@ -110,6 +158,8 @@ def _agent_workflow(
             "post_tool_use",
             {"tool_name": tool_name, "tool_input": tool_input, "agent_id": agent_id},
         )
+        if index == 0:
+            _hiccup(ctx, agent_id, agent_name)
         # Long quiet stretch so idle wandering has a chance to kick in.
         time.sleep(random.uniform(20.0, 35.0))
 
@@ -152,6 +202,22 @@ def run(ctx: SimulationContext) -> None:
     ]
     for thread in threads:
         thread.start()
+
+    # Meanwhile the boss trips over auto mode.
+    time.sleep(45)
+    ctx.log("[youtube] boss write blocked by auto mode")
+    ctx.send_event(
+        "error",
+        {
+            "error_type": "permission_denied",
+            "tool_name": "Write",
+            "tool_input": {"file_path": "/etc/hosts"},
+            "message": "Write to /etc/hosts was blocked by auto mode",
+            "reason": "Path outside the project",
+            "agent_id": "main",
+        },
+    )
+
     for thread in threads:
         thread.join()
 

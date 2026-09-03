@@ -118,6 +118,29 @@ const ptBR: Record<TranslationKey, string> = {
   // Right Sidebar
   "sidebar.events": "Eventos",
   "sidebar.conversation": "Conversa",
+  "sidebar.issues": "Problemas",
+
+  // Issues panel
+  "issues.title": "Problemas",
+  "issues.openCount": "{count} abertos",
+  "issues.openCount_one": "{count} aberto",
+  "issues.openCount_other": "{count} abertos",
+  "issues.empty": "Sem problemas — o escritório está funcionando bem.",
+  "issues.resolved": "Resolvidos",
+  "issues.whatHappened": "O que aconteceu",
+  "issues.suggestedFix": "Correção sugerida",
+  "issues.agent": "Quem",
+  "issues.boss": "Claude (chefe)",
+  "issues.tool": "Ferramenta",
+  "issues.toolInput": "Entrada da ferramenta",
+  "issues.openTerminal": "Abrir terminal",
+  "issues.copyError": "Copiar erro",
+  "issues.copied": "Copiado!",
+  "issues.markFixed": "Marcar como resolvido",
+  "issues.resolvedAt": "Resolvido às",
+  "issues.severity.critical": "Crítico",
+  "issues.severity.high": "Alto",
+  "issues.severity.low": "Baixo",
 
   // Event Log
   "eventLog.title": "Log de Eventos",

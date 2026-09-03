@@ -359,6 +359,10 @@ export type RoomId4 = string | null;
 export type NotificationType1 = string | null;
 export type ErrorType1 = string | null;
 export type Reason1 = string | null;
+export type ToolName1 = string | null;
+export type ToolInput1 = {
+  [k: string]: unknown;
+} | null;
 export type Lastupdated1 = string;
 export type Sessionid1 = string;
 export type Bucket = "needs_you" | "working" | "done";
@@ -457,9 +461,9 @@ export type CacheReadTokens8 = number | null;
 export type CacheCreationTokens8 = number | null;
 export type FloorId8 = string | null;
 export type RoomId8 = string | null;
-export type ToolName1 = string | null;
+export type ToolName2 = string | null;
 export type ToolUseId2 = string | null;
-export type ToolInput1 = {
+export type ToolInput2 = {
   [k: string]: unknown;
 } | null;
 export type Success2 = boolean | null;
@@ -969,6 +973,8 @@ export interface LifecycleEventData {
   notification_type?: NotificationType1;
   error_type?: ErrorType1;
   reason?: Reason1;
+  tool_name?: ToolName1;
+  tool_input?: ToolInput1;
   bubble_content?: BubbleContent | null;
   speech_content?: SpeechContent | null;
   [k: string]: unknown;
@@ -1142,9 +1148,9 @@ export interface ToolEventData {
   cache_creation_tokens?: CacheCreationTokens8;
   floor_id?: FloorId8;
   room_id?: RoomId8;
-  tool_name?: ToolName1;
+  tool_name?: ToolName2;
   tool_use_id?: ToolUseId2;
-  tool_input?: ToolInput1;
+  tool_input?: ToolInput2;
   success?: Success2;
   result_summary?: ResultSummary2;
   error_type?: ErrorType2;

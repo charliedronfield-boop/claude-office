@@ -106,6 +106,11 @@ export interface EventDetail {
   taskDescription?: string;
   agentName?: string;
   prompt?: string;
+  success?: boolean;
+  reason?: string;
+  notificationType?: string;
+  nativeAgentId?: string;
+  backgroundTaskStatus?: string;
 }
 
 /**

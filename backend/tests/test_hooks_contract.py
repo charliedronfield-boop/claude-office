@@ -176,6 +176,32 @@ _RAW_CASES: list[tuple[str, dict[str, Any], str]] = [
     ("stop", {"session_id": "abc123"}, "stop"),
     # pre_compact remaps to context_compaction.
     ("pre_compact", {"session_id": "abc123"}, "pre_compact-to-context_compaction"),
+    # Failure hooks: tool failures stay post_tool_use (success=false); denials
+    # and turn failures become error events.
+    (
+        "post_tool_use_failure",
+        {
+            "session_id": "abc123",
+            "tool_name": "Bash",
+            "tool_use_id": "t_bash",
+            "tool_input": {"command": "pytest"},
+            "error": "exit code 1",
+            "agent_id": "sa_1",
+        },
+        "post_tool_use_failure-to-post_tool_use",
+    ),
+    (
+        "permission_denied",
+        {
+            "session_id": "abc123",
+            "tool_name": "Bash",
+            "tool_use_id": "t_bash",
+            "tool_input": {"command": "rm -rf build"},
+            "reason": "blocked",
+        },
+        "permission_denied-to-error",
+    ),
+    ("stop_failure", {"session_id": "abc123", "error": "429"}, "stop_failure-to-error"),
 ]
 
 
@@ -198,6 +224,7 @@ _EXPECTED_HOOKS_OUTPUT_TYPES: frozenset[str] = frozenset(
         "notification",
         "stop",
         "context_compaction",
+        "error",
     }
 )
 

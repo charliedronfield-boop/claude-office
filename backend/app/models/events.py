@@ -263,6 +263,9 @@ class LifecycleEventData(EventDataBase):
     notification_type: str | None = None
     error_type: str | None = None
     reason: str | None = None
+    # Tool context for permission_denied errors.
+    tool_name: str | None = None
+    tool_input: dict[str, Any] | None = None
     bubble_content: BubbleContent | None = None
     speech_content: SpeechContent | None = None
 

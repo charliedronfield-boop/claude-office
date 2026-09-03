@@ -320,6 +320,56 @@ def _handle_post_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
     sm.tool_uses_since_compaction += 1
     sm.whiteboard.track_tool_use(event)
 
+    if event.data.success is False:
+        tool_name = event.data.tool_name or "tool"
+        _show_problem(
+            sm,
+            event.data.agent_id,
+            event.data.native_agent_id,
+            icon="❌",
+            text=f"{tool_name} failed",
+            headline=f"{tool_name} failed: {event.data.message or 'see issues panel'}",
+        )
+
+
+def _handle_error(sm: "StateMachine", event: AnyEvent) -> None:
+    """Handle ERROR: surface permission denials and turn failures on the character."""
+    assert isinstance(event, LifecycleEvent)
+    error_type = event.data.error_type or "error"
+    icon = "⛔" if error_type == "permission_denied" else "💥"
+    text = event.data.message or error_type.replace("_", " ")
+    _show_problem(
+        sm,
+        event.data.agent_id,
+        event.data.native_agent_id,
+        icon=icon,
+        text=text,
+        headline=f"{error_type.replace('_', ' ').capitalize()}: {text}",
+    )
+
+
+def _show_problem(
+    sm: "StateMachine",
+    agent_id: str | None,
+    native_agent_id: str | None,
+    *,
+    icon: str,
+    text: str,
+    headline: str,
+) -> None:
+    """Put a problem bubble on the responsible character and log it on the whiteboard."""
+    bubble = BubbleContent(
+        type=BubbleType.THOUGHT,
+        text=truncate_long_words(compress_paths_in_text(text)[:60], max_len=35),
+        icon=icon,
+    )
+    target = sm.resolve_character(agent_id, native_agent_id)
+    if target == "main":
+        sm.boss_bubble = bubble
+    else:
+        sm.agents[target].bubble = bubble
+    sm.whiteboard.add_news_item("error", headline[:120])
+
 
 def _handle_subagent_start(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle SUBAGENT_START: create a new agent and add to arrival queue."""
@@ -492,6 +542,7 @@ _DISPATCH_TABLE: dict[EventType, Callable[["StateMachine", AnyEvent], None]] = {
     EventType.SUBAGENT_START: _handle_subagent_start,
     EventType.SUBAGENT_STOP: _handle_subagent_stop,
     EventType.CLEANUP: _handle_cleanup,
+    EventType.ERROR: _handle_error,
     EventType.STOP: _handle_stop,
     EventType.SESSION_END: _handle_session_end,
     EventType.BACKGROUND_TASK_NOTIFICATION: _handle_background_task_notification,
@@ -693,6 +744,20 @@ class StateMachine:
             floor_id=self.floor_id,
             room_id=self.room_id,
         )
+
+    def resolve_character(self, agent_id: str | None, native_agent_id: str | None) -> str:
+        """Return the agent key an event belongs to, or ``"main"`` for the boss.
+
+        Hooks attribute tool events to ``"main"`` but carry the native subagent
+        id when they fired inside a subagent, so the native id wins.
+        """
+        if native_agent_id:
+            for key, agent in self.agents.items():
+                if agent.native_id == native_agent_id:
+                    return key
+        if agent_id and agent_id in self.agents:
+            return agent_id
+        return "main"
 
     def remove_agent(self, agent_id: str) -> None:
         """Remove an agent from the office and all queues.

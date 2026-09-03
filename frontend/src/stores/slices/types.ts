@@ -60,6 +60,7 @@ export interface BubbleState {
 export interface AgentAnimationState {
   // Identity (from backend)
   id: string;
+  nativeId: string | null;
   name: string | null;
   color: string;
   number: number;

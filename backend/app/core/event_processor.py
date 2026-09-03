@@ -562,6 +562,11 @@ class EventProcessor:
             ("task_description", "taskDescription"),
             ("agent_name", "agentName"),
             ("prompt", "prompt"),
+            ("success", "success"),
+            ("reason", "reason"),
+            ("notification_type", "notificationType"),
+            ("native_agent_id", "nativeAgentId"),
+            ("background_task_status", "backgroundTaskStatus"),
         ]:
             val = getattr(event.data, src, None)
             if val is not None:
@@ -1181,6 +1186,9 @@ class EventProcessor:
                 return f"Using {tool} {target}".strip()
             case EventType.POST_TOOL_USE:
                 assert isinstance(event, ToolEvent)
+                if event.data.success is False:
+                    reason = event.data.message or event.data.error_type or "unknown error"
+                    return f"Failed {event.data.tool_name or 'tool'}: {reason}"
                 return f"Completed {event.data.tool_name or 'tool'}"
             case EventType.USER_PROMPT_SUBMIT:
                 assert isinstance(event, PromptEvent)
@@ -1235,7 +1243,8 @@ class EventProcessor:
                 return f"Agent {event.data.agent_id or 'unknown'} leaving"
             case EventType.ERROR:
                 assert isinstance(event, LifecycleEvent)
-                return f"Error: {event.data.message or 'unknown error'}"
+                label = (event.data.error_type or "error").replace("_", " ").capitalize()
+                return f"{label}: {event.data.message or 'unknown error'}"
             case EventType.BACKGROUND_TASK_NOTIFICATION:
                 assert isinstance(event, BackgroundTaskEvent)
                 task_id = event.data.background_task_id or "unknown"

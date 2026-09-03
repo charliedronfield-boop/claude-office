@@ -24,7 +24,36 @@ import { TypingTracker } from "@/systems/typingTracker";
 import { reconcileState } from "@/systems/stateReconciler";
 import { shouldShowToast } from "@/systems/toastFilter";
 import { WebSocketController } from "@/systems/webSocketController";
+import {
+  classifyIssue,
+  clearsWaitingIssues,
+  type IssueActor,
+} from "@/systems/issueClassifier";
+import { useIssuesStore } from "@/stores/issuesStore";
 import type { EventType, WebSocketMessage } from "@/types";
+
+/**
+ * Work out which character an event belongs to. Hooks attribute tool events
+ * to "main" but carry the native subagent id when they fired inside one.
+ */
+function resolveIssueActor(
+  event: NonNullable<WebSocketMessage["event"]>,
+): IssueActor {
+  const agents = useGameStore.getState().agents;
+  const nativeId = event.detail?.nativeAgentId;
+  if (nativeId) {
+    for (const agent of agents.values()) {
+      if (agent.nativeId === nativeId) {
+        return { agentId: agent.id, agentName: agent.name };
+      }
+    }
+  }
+  const agentId = event.agentId || "main";
+  return {
+    agentId,
+    agentName: agents.get(agentId)?.name ?? event.detail?.agentName ?? null,
+  };
+}
 
 // ============================================================================
 // TYPES
@@ -118,6 +147,22 @@ export function useWebSocketEvents({
                 processedAgentsRef.current.clear();
                 lastSeenBubbleTextRef.current.clear();
                 resetSpawnIndex();
+                useIssuesStore.getState().reset();
+              }
+
+              // Issues panel — record problems, clear "waiting on you" ones
+              // once the agent (or the whole session) moves on.
+              const issueActor = resolveIssueActor(message.event);
+              const issue = classifyIssue(message.event, issueActor);
+              if (issue) {
+                useIssuesStore.getState().addIssue(issue);
+              } else if (clearsWaitingIssues(message.event.type)) {
+                const sessionWide =
+                  message.event.type === "stop" ||
+                  message.event.type === "session_end";
+                useIssuesStore
+                  .getState()
+                  .resolveWaitingFor(sessionWide ? null : issueActor.agentId);
               }
 
               // Toggle typing animation on tool-use events (min-duration enforced
@@ -263,4 +308,6 @@ export function resetFrontendState(): void {
 
   // Reset spawn positions.
   resetSpawnIndex();
+
+  useIssuesStore.getState().reset();
 }
