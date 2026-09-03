@@ -25,6 +25,7 @@ System architecture and design documentation for Claude Office Visualizer.
 - [PixiJS Rendering](#pixijs-rendering)
 - [Multi-Floor / Agent Teams](#multi-floor--agent-teams)
 - [Command Center](#command-center)
+- [Rooms, Chats and Issues](#rooms-chats-and-issues)
 - [Configuration Reference](#configuration-reference)
 - [Related Documentation](#related-documentation)
 
@@ -873,6 +874,27 @@ All configuration is managed via environment variables or a `.env` file in the `
 ### Authentication
 
 The backend has a two-mode API-key model. When `CLAUDE_OFFICE_API_KEY` is unset (the default), a random token is generated per launch and only the destructive global operations (`DELETE /api/v1/sessions`, `POST /api/v1/sessions/simulate`) require it. When `CLAUDE_OFFICE_API_KEY` is set explicitly, every endpoint except `/health`, `/docs`, `/redoc`, the OpenAPI schema, and CORS preflight requires the key in the `X-API-Key` header (compared with `hmac.compare_digest`). Browser WebSocket connections must originate from an allowed localhost origin; non-browser clients must send `X-API-Key` or the handshake closes with code 4003. See the [backend README](../../backend/README.md#authentication) for the full key sources, gated endpoints, and discovery flow.
+
+## Rooms, Chats and Issues
+
+The single-session office is split into four walled rooms, one per production role, and the characters interact with each other rather than only with the boss.
+
+### Role rooms
+
+- `backend/app/core/office_rooms.py` maps a subagent's `agent_type` (the `subagent_type` passed to the `Agent` tool) to a room via keyword matching (`scripting`, `editing`, `thumbnails_seo`, `publishing`); unknown roles land in the emptiest room. `StateMachine.create_agent()` picks the lowest free desk in that room (overflowing to any free desk) and stores `role_type` / `room_id` on the `Agent`.
+- `frontend/src/systems/officeRooms.ts` is the geometry mirror: partition walls, a bottom wall with a three-tile doorway per room, chat spots in each room's open area, the meeting table (impassable block + four seats) and wander tiles. `navigationGrid.ts` bakes the walls/doors/table into the A* grid; `RoomWalls.tsx` and `MeetingTable.tsx` draw them.
+
+### Idle wandering
+
+The agent XState machine's `idle` state is compound (`at_desk → wandering → pausing → returning_to_desk`). `agentMachineService.canWander()` gates strolls on 15 s without backend activity, no pending bubble and no permission wait; `stateReconciler` calls `notifyActivity()` on any state/bubble change, which resets the clock and calls a strolling agent back.
+
+### Chats and meetings
+
+`SendMessage` tool calls are mapped by the hook to `agent_message` events. `_handle_agent_message` resolves sender (native id → agent, else boss) and recipient (native id, agent key, name, role) and attaches a `ChatInfo` to both characters (`Agent.active_chat`, `Boss.active_chat`): boss → agent meets at the boss desk, agent → agent in the shared room or at the meeting table, and boss messages to several agents within 15 s become a meeting at the table. Chats clear on the character's next tool call or expire after `CHAT_TTL_SECONDS`. On the frontend a new/relocated chat sends `CHAT_START` to the machine (`walking_to_chat → chatting → returning_to_desk`); the speaker shows the text as a speech bubble.
+
+### Issues panel
+
+Hooks also install `PostToolUseFailure`, `PermissionDenied` and `StopFailure`, mapped to a failed `post_tool_use` (`success: false`) and `error` events. `frontend/src/systems/issueClassifier.ts` turns these plus `permission_request`, actionable `notification` types and failed background tasks into issues held in `issuesStore.ts`; `IssuesPanel.tsx` lists them (auto-focused on critical ones), `IssueDetailModal.tsx` explains them with a suggested fix and a one-click "Open terminal" (`POST /api/v1/sessions/{id}/focus`), and `IssueMarker.tsx` flags the affected character on the floor. Waiting-type issues resolve automatically when the agent moves on; `useStuckAgentWatch.ts` flags agents that report working with no activity for five minutes.
 
 ## Related Documentation
 
