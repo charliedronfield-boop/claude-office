@@ -52,6 +52,9 @@ function getPhaseColor(phase: string) {
   switch (phase) {
     case "idle":
       return "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
+    case "wandering":
+    case "returning_to_desk":
+      return "bg-teal-500/20 text-teal-400 border-teal-500/40";
     case "arriving":
     case "in_arrival_queue":
     case "walking_to_ready":

@@ -130,6 +130,9 @@ export function useWebSocketEvents({
                 const typingKey = agentId || "boss";
                 if (message.event.type === "pre_tool_use") {
                   typingTrackerRef.current?.onPreToolUse(typingKey);
+                  if (agentId && agentId !== "main") {
+                    agentMachineService.notifyActivity(agentId);
+                  }
                 } else {
                   typingTrackerRef.current?.onPostToolUse(typingKey);
                 }

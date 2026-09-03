@@ -46,6 +46,7 @@ export type AgentSlice = {
     queueIndex: number,
   ) => void;
   setAgentTyping: (agentId: string, typing: boolean) => void;
+  touchAgentActivity: (agentId: string) => void;
   applyAgentMovements: (movements: AgentMovement[]) => void;
 };
 
@@ -101,6 +102,7 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
           queueType: null,
           queueIndex: -1,
           isTyping: false,
+          lastActivityAt: Date.now(),
         };
         newAgents.set(backendAgent.id, animState);
 
@@ -159,6 +161,9 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
       patchAgent(agentId, { queueType, queueIndex }),
 
     setAgentTyping: (agentId, isTyping) => patchAgent(agentId, { isTyping }),
+
+    touchAgentActivity: (agentId) =>
+      patchAgent(agentId, { lastActivityAt: Date.now() }),
 
     // ARC-006: apply every moving agent's position/path delta for one animation
     // tick in a single `set()` (one Map clone), instead of one write — and one

@@ -22,6 +22,8 @@ import type {
  */
 export type AgentPhase =
   | "idle" // At desk, working
+  | "wandering" // Strolling around the room between tool calls
+  | "returning_to_desk" // Walking back from a stroll
   | "arriving" // Just spawned, walking to queue
   | "in_arrival_queue" // Waiting in arrival queue
   | "walking_to_ready" // Moving to position 0 (ready to talk spot)
@@ -86,6 +88,7 @@ export interface AgentAnimationState {
 
   // Animation state
   isTyping: boolean; // True when agent is actively using tools
+  lastActivityAt: number; // Wall-clock ms of the last backend state/bubble/tool change
 }
 
 /**

@@ -52,6 +52,7 @@ function makeRecordingActions(): AgentMachineActions & { calls: Call[] } {
     onOpenElevator: stub("onOpenElevator"),
     onCloseElevator: stub("onCloseElevator"),
     onAgentRemoved: stub("onAgentRemoved"),
+    canWander: () => false,
     calls,
   };
 }

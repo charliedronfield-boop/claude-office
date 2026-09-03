@@ -70,7 +70,10 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
         conversationStep: 0,
       }),
     },
-    guards: sharedGuards,
+    guards: {
+      ...sharedGuards,
+      canWander: ({ context }) => actions.canWander(context.agentId),
+    },
     delays: sharedDelays,
   }).createMachine({
     id: "agent",
@@ -86,14 +89,63 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
       },
 
       // ======================================================================
-      // IDLE — Agent is at their desk working
+      // IDLE — Agent is at their desk working, with occasional strolls around
+      // its room while nothing is happening
       // ======================================================================
       idle: {
-        entry: [{ type: "notifyPhaseChange", params: { phase: "idle" } }],
+        initial: "at_desk",
         on: {
           REMOVE: {
             target: "departure.departing",
             actions: ["setQueueTypeDeparture"],
+          },
+        },
+        states: {
+          at_desk: {
+            entry: [{ type: "notifyPhaseChange", params: { phase: "idle" } }],
+            after: {
+              WANDER_DELAY: [
+                { target: "wandering", guard: "canWander" },
+                // Re-enter to re-arm the timer and check again later.
+                { target: "at_desk", reenter: true },
+              ],
+            },
+          },
+
+          wandering: {
+            entry: [
+              { type: "notifyPhaseChange", params: { phase: "wandering" } },
+              "startWalkingToWanderSpot",
+            ],
+            on: {
+              ARRIVED_AT_SPOT: "pausing",
+              RETURN_TO_DESK: "returning_to_desk",
+            },
+          },
+
+          pausing: {
+            after: {
+              WANDER_PAUSE: [
+                { target: "wandering", guard: "wantsAnotherStroll" },
+                { target: "returning_to_desk" },
+              ],
+            },
+            on: {
+              RETURN_TO_DESK: "returning_to_desk",
+            },
+          },
+
+          returning_to_desk: {
+            entry: [
+              {
+                type: "notifyPhaseChange",
+                params: { phase: "returning_to_desk" },
+              },
+              "startWalkingToDesk",
+            ],
+            on: {
+              ARRIVED_AT_DESK: "at_desk",
+            },
           },
         },
       },

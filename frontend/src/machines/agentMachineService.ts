@@ -33,6 +33,12 @@ import {
   getReadyPosition,
   getElevatorPathTarget,
 } from "./positionHelpers";
+import { getRoomForDesk, wanderTiles } from "@/systems/officeRooms";
+
+/** Quiet time (no backend activity) before an agent may leave its desk. */
+const WANDER_IDLE_THRESHOLD_MS = 15_000;
+/** Skip wander spots this close to the agent so every stroll is visible. */
+const WANDER_MIN_DISTANCE = 64;
 
 // ============================================================================
 // TYPES
@@ -88,6 +94,7 @@ class AgentMachineService implements AnimationListener {
       onOpenElevator: this.handleOpenElevator.bind(this),
       onCloseElevator: this.handleCloseElevator.bind(this),
       onAgentRemoved: this.handleAgentRemoved.bind(this),
+      canWander: this.canWander.bind(this),
     };
   }
 
@@ -207,12 +214,24 @@ class AgentMachineService implements AnimationListener {
       walking_to_boss: "ARRIVED_AT_BOSS",
       walking_to_desk: "ARRIVED_AT_DESK",
       walking_to_elevator: "ARRIVED_AT_ELEVATOR",
+      wandering: "ARRIVED_AT_SPOT",
+      returning_to_desk: "ARRIVED_AT_DESK",
     };
 
     const eventType = eventMap[phase];
     if (eventType) {
       managed.actor.send({ type: eventType } as AgentMachineEvent);
     }
+  }
+
+  /**
+   * Record backend activity for an agent (state change, new bubble, tool
+   * call). Resets the idle clock and calls a strolling agent back to its desk.
+   */
+  notifyActivity(agentId: string): void {
+    if (!this.agents.has(agentId)) return;
+    useGameStore.getState().touchAgentActivity(agentId);
+    this.sendEvent(agentId, { type: "RETURN_TO_DESK" });
   }
 
   /**
@@ -444,10 +463,43 @@ class AgentMachineService implements AnimationListener {
     } else if (movementType === "to_elevator") {
       targetPosition = getElevatorPathTarget();
       this.releaseReadyAndNotify(agentId, store);
+    } else if (movementType === "to_wander_spot") {
+      targetPosition = this.pickWanderSpot(agentId) ?? _target;
     }
 
     store.updateAgentTarget(agentId, targetPosition);
     animationSystem.setAgentPath(agentId, targetPosition);
+  }
+
+  // ==========================================================================
+  // IDLE WANDERING
+  // ==========================================================================
+
+  private canWander(agentId: string): boolean {
+    const store = useGameStore.getState();
+    const agent = store.agents.get(agentId);
+    if (!agent || !getRoomForDesk(agent.desk)) return false;
+    if (agent.backendState === "waiting_permission") return false;
+    if (agent.bubble.content !== null || agent.bubble.queue.length > 0) {
+      return false;
+    }
+    if (store.compactionPhase !== "idle") return false;
+    return Date.now() - agent.lastActivityAt >= WANDER_IDLE_THRESHOLD_MS;
+  }
+
+  private pickWanderSpot(agentId: string): Position | null {
+    const agent = useGameStore.getState().agents.get(agentId);
+    const room = agent ? getRoomForDesk(agent.desk) : null;
+    if (!agent || !room) return null;
+
+    const { currentPosition } = agent;
+    const candidates = wanderTiles(room).filter(
+      (tile) =>
+        Math.hypot(tile.x - currentPosition.x, tile.y - currentPosition.y) >
+        WANDER_MIN_DISTANCE,
+    );
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
   /**
