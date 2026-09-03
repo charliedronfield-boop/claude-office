@@ -96,6 +96,8 @@ import {
 import { ZoomControls } from "./ZoomControls";
 import { LoadingScreen } from "./LoadingScreen";
 import { OfficeBackground } from "./OfficeBackground";
+import { RoomWalls } from "./RoomWalls";
+import { MeetingTable } from "./MeetingTable";
 
 // Register PixiJS components
 extend({ Container, Text, Graphics, Sprite });
@@ -361,6 +363,9 @@ export function OfficeGame(): ReactNode {
                   {/* Floor and walls */}
                   <OfficeBackground floorTileTexture={textures.floorTile} />
 
+                  {/* Role rooms: floor tints, partitions, doors, placards */}
+                  <RoomWalls />
+
                   {/* Boss area rug - rendered right after floor */}
                   {textures.bossRug && (
                     <pixiSprite
@@ -498,6 +503,9 @@ export function OfficeGame(): ReactNode {
                         </pixiContainer>
                       );
                     })}
+
+                    {/* Meeting table and its chairs share the Y-sort with agents */}
+                    <MeetingTable chairTexture={textures.chair} />
 
                     {/* Agents outside elevator - zIndex based on feet Y position */}
                     {Array.from(agents.values())

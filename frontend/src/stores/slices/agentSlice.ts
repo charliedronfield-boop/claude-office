@@ -87,6 +87,7 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
           color: backendAgent.color,
           number: backendAgent.number,
           desk: backendAgent.desk ?? null,
+          roomId: backendAgent.roomId ?? null,
           backendState: backendAgent.state,
           currentTask: backendAgent.currentTask ?? null,
           characterType: backendAgent.characterType ?? null,

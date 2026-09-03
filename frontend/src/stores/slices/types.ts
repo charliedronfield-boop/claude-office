@@ -62,6 +62,7 @@ export interface AgentAnimationState {
   color: string;
   number: number;
   desk: number | null;
+  roomId: string | null;
   backendState: BackendAgentState;
   currentTask: string | null;
   characterType: string | null;

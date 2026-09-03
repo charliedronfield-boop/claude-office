@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Simulation entry point for the Claude Office Visualizer.
 
-Runs one of five pre-built scenarios against the backend API:
+Runs one of six pre-built scenarios against the backend API:
 
   basic       Simple agent spawn/complete (~60 s)
   complex     Multi-agent workflow with context compaction (~5-10 min) [default]
   edge_cases  Error handling, permissions, orphan cleanup (~2 min)
   quick       Fast (~30 s) full-lifecycle smoke scenario
   teams       Multi-session team scenario (room-orchestrator merge path)
+  youtube     Four YouTube-production roles routed into their own rooms (~4 min)
 
 Usage::
 

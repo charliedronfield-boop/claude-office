@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any, cast
 
+from app.core.office_rooms import DESK_TO_ROOM, pick_desk, resolve_room
 from app.core.path_utils import compress_path, compress_paths_in_text, truncate_long_words
 from app.core.quotes import get_random_job_completion_quote
 from app.core.summary_service import get_summary_service
@@ -815,13 +816,19 @@ class StateMachine:
 
         task = data.task_description or data.agent_name or None
 
+        used_desks = {a.desk for a in self.agents.values() if a.desk is not None}
+        room_id = resolve_room(data.agent_type, used_desks)
+        desk = pick_desk(room_id, used_desks) or count
+
         return Agent(
             id=agent_id,
             name=short_name,
             color=color,
             number=count,
             state=AgentState.ARRIVING,
-            desk=count,
+            desk=desk,
             bubble=None,
             current_task=task,
+            role_type=data.agent_type,
+            room_id=DESK_TO_ROOM.get(desk, room_id),
         )

@@ -41,6 +41,8 @@ export type Text = string;
 export type Icon = string | null;
 export type Persistent = boolean;
 export type Currenttask = string | null;
+export type Roletype = string | null;
+export type Roomid = string | null;
 export type Charactertype = string | null;
 export type Parentsessionid = string | null;
 export type Parentid = string | null;
@@ -313,7 +315,7 @@ export type Coffeecups = number;
 export type Backgroundtasks = BackgroundTask[];
 export type Conversation = ConversationEntry[];
 export type Floorid = string | null;
-export type Roomid = string | null;
+export type Roomid1 = string | null;
 /**
  * Current branch name
  */
@@ -485,6 +487,8 @@ export interface Agent {
   bubble?: BubbleContent | null;
   currentTask?: Currenttask;
   position?: Position;
+  roleType?: Roletype;
+  roomId?: Roomid;
   characterType?: Charactertype;
   parentSessionId?: Parentsessionid;
   parentId?: Parentid;
@@ -809,7 +813,7 @@ export interface GameState {
   whiteboardData?: WhiteboardData;
   conversation?: Conversation;
   floorId?: Floorid;
-  roomId?: Roomid;
+  roomId?: Roomid1;
   [k: string]: unknown;
 }
 /**

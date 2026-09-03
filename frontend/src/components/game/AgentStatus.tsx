@@ -10,6 +10,7 @@
 import { useGameStore, selectAgents } from "@/stores/gameStore";
 import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "@/hooks/useTranslation";
+import { getRoomForDesk } from "@/systems/officeRooms";
 import {
   Users,
   Briefcase,
@@ -136,7 +137,8 @@ export function AgentStatus() {
                 {agent.desk && (
                   <span className="text-slate-500 text-[10px] flex items-center gap-1 flex-shrink-0">
                     <MapPin size={10} />
-                    {t("agentStatus.desk")} {agent.desk}
+                    {getRoomForDesk(agent.desk)?.name ??
+                      `${t("agentStatus.desk")} ${agent.desk}`}
                   </span>
                 )}
               </div>

@@ -62,6 +62,8 @@ class Agent(BaseModel):
     bubble: BubbleContent | None = None
     current_task: str | None = None
     position: dict[str, int] = {"x": 0, "y": 0}
+    role_type: str | None = None  # subagent_type the agent was spawned with
+    room_id: str | None = None  # office_rooms.Room.id derived from the assigned desk
     # Agent Teams character hierarchy (Phase 4)
     character_type: str | None = None  # "lead" | "teammate" | "subagent"
     parent_session_id: str | None = None  # session that owns this character
