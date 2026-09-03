@@ -51,6 +51,7 @@ from app.core.handlers import (
 from app.core.jsonl_parser import get_last_assistant_response
 from app.core.permission_gate import get_permission_gate
 from app.core.product_mapper import get_product_mapper
+from app.core.room_notes import add_note
 from app.core.room_orchestrator import RoomOrchestrator
 from app.core.state_machine import StateMachine
 from app.core.task_file_poller import init_task_file_poller
@@ -535,6 +536,16 @@ class EventProcessor:
 
         sm.transition(event)
 
+        # Every real inter-agent chat sticks around on the room's knowledge
+        # board, not just as a passing speech bubble. Best-effort: a DB
+        # hiccup here must never break message delivery/chat visuals.
+        if event.event_type == EventType.AGENT_MESSAGE:
+            assert isinstance(event, AgentMessageEvent)
+            try:
+                await self._note_agent_message(sm, event)
+            except Exception:
+                logger.exception("Failed to record room note for agent_message")
+
         # Register a waiter for the office UI's Approve/Deny buttons. The
         # hook process that raised this PermissionRequest may be blocked on
         # GET /permissions/{tool_use_id}/wait right now (see
@@ -968,6 +979,23 @@ class EventProcessor:
         if sm is not None:
             async with self._sessions_lock:
                 self.sessions[session_id] = sm
+
+    async def _note_agent_message(self, sm: StateMachine, event: AgentMessageEvent) -> None:
+        """Append a real inter-agent chat to whichever agent's room it happened in."""
+        sender = sm.resolve_character(event.data.agent_id, event.data.native_agent_id)
+        recipient = sm.resolve_recipient(event.data.to)
+        room_id = next(
+            (sm.agents[key].room_id for key in (recipient, sender) if key in sm.agents),
+            None,
+        )
+        if room_id is None:
+            return
+        sender_name = "Claude" if sender == "main" else sm.agents[sender].name or sender
+        text = (event.data.summary or event.data.message_text or "").strip()
+        if not text:
+            return
+        async with AsyncSessionLocal() as db:
+            await add_note(db, room_id, f"{sender_name}: {text}", source="chat")
 
     async def _persist_event(
         self,

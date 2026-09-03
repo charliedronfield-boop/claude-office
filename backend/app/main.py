@@ -16,7 +16,16 @@ from rich.logging import RichHandler
 from sqlalchemy import delete, select, update
 
 from app.api.middleware import ApiKeyMiddleware, LocalhostOnlyMiddleware
-from app.api.routes import events, floors, permissions, preferences, rooms, sessions, websockets
+from app.api.routes import (
+    events,
+    floors,
+    permissions,
+    preferences,
+    room_notes,
+    rooms,
+    sessions,
+    websockets,
+)
 from app.config import get_settings
 from app.core.event_processor import EventProcessor, get_event_processor
 from app.core.summary_service import get_summary_service
@@ -188,6 +197,7 @@ app.add_middleware(ApiKeyMiddleware)
 app.include_router(events.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(floors.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(rooms.router, prefix=f"{settings.API_V1_STR}")
+app.include_router(room_notes.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(preferences.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(permissions.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(sessions.router, prefix=f"{settings.API_V1_STR}")

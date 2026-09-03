@@ -7,7 +7,14 @@ CRITICAL: This hook must NEVER interfere with Claude Code:
 - Never print to stderr (would show errors to user)
 - Always exit 0 (non-zero blocks Claude actions)
 
-All output is suppressed and errors are logged to the debug file.
+All output is suppressed and errors are logged to the debug file, with
+exactly two deliberate exceptions, each scoped to its own event type so
+they can never collide in one invocation:
+- PermissionRequest may print a real Approve/Deny decision (see
+  ``_wait_for_permission_decision`` — the one hook allowed to block).
+- UserPromptSubmit may print the room-notes knowledge board as
+  ``additionalContext`` (see ``_maybe_inject_room_notes`` — fast, best-effort,
+  never blocks).
 """
 
 import io
@@ -110,11 +117,58 @@ try:
             # Record the failure but never disrupt the user (always swallow).
             log_error(exc, "send_event failed")
 
+    def _api_base_url() -> str:
+        """Derive the plain /api/v1 base from API_URL (which ends in /events)."""
+        if API_URL.endswith("/events"):
+            return API_URL[: -len("/events")]
+        return API_URL.rstrip("/") + "/.."
+
     def _permissions_base_url() -> str:
         """Derive the /permissions base from API_URL (which ends in /events)."""
-        if API_URL.endswith("/events"):
-            return API_URL[: -len("/events")] + "/permissions"
-        return API_URL.rstrip("/") + "/../permissions"
+        return _api_base_url() + "/permissions"
+
+    # Nice-to-have, not critical like the permission wait — keep this fast so
+    # it never meaningfully delays a prompt submission.
+    ROOM_NOTES_TIMEOUT = 1.5
+
+    def _maybe_inject_room_notes() -> None:
+        """Best-effort: surface the knowledge board as additionalContext.
+
+        Only ever prints something when there ARE notes and the backend
+        answers quickly; any failure (backend down, slow, unexpected
+        response shape) just means the boss doesn't see the board on this
+        particular turn — never an error, never a delay worth noticing.
+        """
+        try:
+            url = f"{_api_base_url()}/room-notes/context"
+            headers: dict[str, str] = {}
+            api_key = get_api_key()
+            if api_key:
+                headers["X-API-Key"] = api_key
+            req = urllib.request.Request(url, headers=headers, method="GET")
+            with _open_request(req, timeout=ROOM_NOTES_TIMEOUT) as response:
+                if response.status >= 300:
+                    return
+                body = json.loads(response.read().decode("utf-8"))
+            context = body.get("context")
+            if not context:
+                return
+            real_stdout = sys.__stdout__
+            if real_stdout is None:
+                return
+            real_stdout.write(
+                json.dumps(
+                    {
+                        "hookSpecificOutput": {
+                            "hookEventName": "UserPromptSubmit",
+                            "additionalContext": context,
+                        }
+                    }
+                )
+            )
+            real_stdout.flush()
+        except Exception as exc:
+            log_error(exc, "room notes context injection failed")
 
     def _print_permission_decision(decision: str, reason: str | None) -> None:
         """Print Claude Code's PermissionRequest decision JSON to real stdout.
@@ -260,6 +314,11 @@ try:
         # _wait_for_permission_decision for the safety property.
         if args.event_type == "permission_request":
             _wait_for_permission_decision(raw_data)
+
+        # Second deliberate, best-effort stdout write — see the module
+        # docstring. Fast (1.5s) and silent on any failure.
+        if args.event_type == "user_prompt_submit":
+            _maybe_inject_room_notes()
 
     if __name__ == "__main__":
         try:

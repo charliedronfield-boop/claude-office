@@ -84,6 +84,30 @@ class TaskRecord(Base):
     )
 
 
+class RoomNoteRecord(Base):
+    """A persistent, room-scoped knowledge note.
+
+    Written either by a person (from the office UI's Notes tab) or by the
+    system when two agents pull each other aside for a chat (see
+    ``app/core/room_notes.py``), so hints agents share with each other stick
+    around instead of scrolling out of the whiteboard's capped news feed.
+    Read back by the ``UserPromptSubmit`` hook (best-effort
+    ``additionalContext``) so the boss sees accumulated notes on its next
+    turn and can pass them along when delegating.
+    """
+
+    __tablename__ = "room_notes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    room_id: Mapped[str] = mapped_column(String, index=True)
+    text: Mapped[str] = mapped_column(String)
+    source: Mapped[str] = mapped_column(String)  # "user" | "chat"
+    author: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
+
+
 class UserPreference(Base):
     """Database model for user preferences.
 

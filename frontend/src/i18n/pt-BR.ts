@@ -119,6 +119,14 @@ const ptBR: Record<TranslationKey, string> = {
   "sidebar.events": "Eventos",
   "sidebar.conversation": "Conversa",
   "sidebar.issues": "Problemas",
+  "sidebar.notes": "Notas",
+
+  // Notes panel (shared knowledge board)
+  "notes.title": "Quadro de conhecimento",
+  "notes.empty": "Ainda sem notas — deixe uma ou espere o time conversar.",
+  "notes.placeholder": "Deixe uma nota para a sala...",
+  "notes.send": "Enviar",
+  "notes.delete": "Excluir nota",
 
   // Issues panel
   "issues.title": "Problemas",

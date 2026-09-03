@@ -5,6 +5,7 @@ import { AgentStatus } from "@/components/game/AgentStatus";
 import { EventLog } from "@/components/layout/EventLog";
 import { ConversationHistory } from "@/components/layout/ConversationHistory";
 import { IssuesPanel } from "@/components/layout/IssuesPanel";
+import { NotesPanel } from "@/components/layout/NotesPanel";
 import { useDragResize } from "@/hooks/useDragResize";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useStuckAgentWatch } from "@/hooks/useStuckAgentWatch";
@@ -35,7 +36,7 @@ const getMaxPanelHeight = () => Math.floor(window.innerHeight * 0.7);
 export function RightSidebar(): React.ReactNode {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<
-    "events" | "conversation" | "issues"
+    "events" | "conversation" | "issues" | "notes"
   >("events");
   const openIssueCount = useIssuesStore(selectOpenCount);
   useStuckAgentWatch();
@@ -138,7 +139,7 @@ export function RightSidebar(): React.ReactNode {
           <button
             onClick={() => setActiveTab("issues")}
             data-tour-id="issues-tab"
-            className={`flex-1 px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors rounded-tr-lg flex items-center justify-center gap-1.5 ${
+            className={`flex-1 px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 ${
               activeTab === "issues"
                 ? "text-red-400 border-b-2 border-red-500 bg-slate-950/50"
                 : openIssueCount > 0
@@ -153,6 +154,16 @@ export function RightSidebar(): React.ReactNode {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab("notes")}
+            className={`flex-1 px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors rounded-tr-lg ${
+              activeTab === "notes"
+                ? "text-amber-400 border-b-2 border-amber-500 bg-slate-950/50"
+                : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {t("sidebar.notes")}
+          </button>
         </div>
 
         {/* Tab content */}
@@ -161,8 +172,10 @@ export function RightSidebar(): React.ReactNode {
             <EventLog />
           ) : activeTab === "conversation" ? (
             <ConversationHistory />
-          ) : (
+          ) : activeTab === "issues" ? (
             <IssuesPanel />
+          ) : (
+            <NotesPanel />
           )}
         </div>
       </div>

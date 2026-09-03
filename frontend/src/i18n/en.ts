@@ -117,6 +117,14 @@ const en = {
   "sidebar.events": "Events",
   "sidebar.conversation": "Conversation",
   "sidebar.issues": "Issues",
+  "sidebar.notes": "Notes",
+
+  // Notes panel (shared knowledge board)
+  "notes.title": "Knowledge Board",
+  "notes.empty": "No notes yet — pin one, or wait for the team to chat.",
+  "notes.placeholder": "Leave a note for the room...",
+  "notes.send": "Send",
+  "notes.delete": "Delete note",
 
   // Issues panel
   "issues.title": "Issues",

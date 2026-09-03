@@ -195,6 +195,21 @@ Code version expects) degrades to exactly today's behavior: the normal
 interactive terminal prompt. If you never see the office UI update your
 decision, the terminal prompt is always still the source of truth.
 
+### Shared knowledge board
+
+The office UI's **Notes** tab is a small, per-room corkboard. You can pin a
+note yourself, and every real inter-agent chat (a `SendMessage` call —
+see `agent_message` above) is automatically pinned as one too, so a hint
+one agent gives another sticks around after the chat animation ends.
+
+`UserPromptSubmit` reads the board back (a fast, 1.5s-budget GET — never
+the long PermissionRequest-style wait) and, if there's anything on it,
+prints it as `additionalContext` so the boss sees accumulated notes on its
+next turn. This is the one documented, verifiable injection point available
+— there is no hook that lets this package rewrite a *new* subagent's
+initial prompt, so getting a note in front of a specific subagent still
+means the boss (or you) passing it along explicitly.
+
 ### Event Data Mapping
 
 The hook extracts and maps key fields:

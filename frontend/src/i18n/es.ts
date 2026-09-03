@@ -119,6 +119,14 @@ const es: Record<TranslationKey, string> = {
   "sidebar.events": "Eventos",
   "sidebar.conversation": "Conversación",
   "sidebar.issues": "Problemas",
+  "sidebar.notes": "Notas",
+
+  // Notes panel (shared knowledge board)
+  "notes.title": "Tablero de conocimiento",
+  "notes.empty": "Aún no hay notas — deja una o espera a que el equipo chatee.",
+  "notes.placeholder": "Deja una nota para la sala...",
+  "notes.send": "Enviar",
+  "notes.delete": "Eliminar nota",
 
   // Issues panel
   "issues.title": "Problemas",
