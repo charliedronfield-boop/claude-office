@@ -15,6 +15,7 @@ import type {
   EventDetail,
   GameState as BackendGameState,
 } from "@/types";
+import type { ChatInfo } from "@/types/generated";
 
 /**
  * Frontend-controlled agent phases for queue choreography.
@@ -23,7 +24,9 @@ import type {
 export type AgentPhase =
   | "idle" // At desk, working
   | "wandering" // Strolling around the room between tool calls
-  | "returning_to_desk" // Walking back from a stroll
+  | "returning_to_desk" // Walking back from a stroll or chat
+  | "walking_to_chat" // Heading to a chat spot / meeting seat
+  | "chatting" // Talking with another character
   | "arriving" // Just spawned, walking to queue
   | "in_arrival_queue" // Waiting in arrival queue
   | "walking_to_ready" // Moving to position 0 (ready to talk spot)
@@ -66,6 +69,7 @@ export interface AgentAnimationState {
   number: number;
   desk: number | null;
   roomId: string | null;
+  activeChat: ChatInfo | null;
   backendState: BackendAgentState;
   currentTask: string | null;
   characterType: string | null;

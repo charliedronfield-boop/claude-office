@@ -202,6 +202,18 @@ _RAW_CASES: list[tuple[str, dict[str, Any], str]] = [
         "permission_denied-to-error",
     ),
     ("stop_failure", {"session_id": "abc123", "error": "429"}, "stop_failure-to-error"),
+    # SendMessage on pre_tool_use remaps to agent_message.
+    (
+        "pre_tool_use",
+        {
+            "session_id": "abc123",
+            "tool_name": "SendMessage",
+            "tool_use_id": "t_msg",
+            "tool_input": {"to": "a5a60c7", "message": "hook first", "summary": "Hook"},
+            "agent_id": "sa_2",
+        },
+        "pre_tool_use-to-agent_message",
+    ),
 ]
 
 
@@ -225,6 +237,7 @@ _EXPECTED_HOOKS_OUTPUT_TYPES: frozenset[str] = frozenset(
         "stop",
         "context_compaction",
         "error",
+        "agent_message",
     }
 )
 

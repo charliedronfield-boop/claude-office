@@ -17,6 +17,9 @@ from app.models.agents import (
     AgentState,
     Boss,
     BossState,
+    ChatInfo,
+    ChatKind,
+    ChatLocation,
     ElevatorState,
     OfficeState,
     PhoneState,
@@ -25,6 +28,7 @@ from app.models.common import BubbleContent, BubbleType, TodoItem, TodoStatus
 from app.models.events import (
     AgentEvent,
     AgentEventData,
+    AgentMessageEvent,
     AnyEvent,
     BackgroundTaskEvent,
     EventType,
@@ -251,7 +255,9 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
         if agent_id == "main":
             sm.boss_bubble = bubble
             sm.boss_state = BossState.WORKING
+            sm.end_chat("main")
         else:
+            sm.end_chat(agent_id)
             if agent_id not in sm.agents and len(sm.agents) < sm.MAX_AGENTS:
                 new_agent = sm.create_agent(
                     AgentEventData(
@@ -346,6 +352,100 @@ def _handle_error(sm: "StateMachine", event: AnyEvent) -> None:
         text=text,
         headline=f"{error_type.replace('_', ' ').capitalize()}: {text}",
     )
+
+
+MEETING_WINDOW_SECONDS = 15.0
+CHAT_TEXT_MAX_LEN = 160
+
+
+def _character_name(sm: "StateMachine", key: str) -> str:
+    if key == "main":
+        return "Claude"
+    agent = sm.agents.get(key)
+    return (agent.name if agent and agent.name else None) or f"Agent-{key[-4:]}"
+
+
+def _handle_agent_message(sm: "StateMachine", event: AnyEvent) -> None:
+    """Handle AGENT_MESSAGE: pull the two characters aside for a chat.
+
+    - boss -> agent: the agent comes over to the boss desk (or, when the boss
+      messages several agents in quick succession, they all gather at the
+      meeting table);
+    - agent -> boss: the agent walks over and speaks;
+    - agent -> agent: same room = a chat in that room, else the meeting table.
+    """
+    assert isinstance(event, AgentMessageEvent)
+    sender = sm.resolve_character(event.data.agent_id, event.data.native_agent_id)
+    recipient = sm.resolve_recipient(event.data.to)
+    text = (event.data.message_text or event.data.summary or "").strip()[:CHAT_TEXT_MAX_LEN]
+    sender_name = _character_name(sm, sender)
+
+    if recipient is None or recipient == sender:
+        sm.whiteboard.add_news_item(
+            "chat", f"{sender_name} messaged {event.data.to or 'someone'}: {text[:60]}"
+        )
+        return
+
+    recipient_name = _character_name(sm, recipient)
+    chat_id = event.data.tool_use_id or f"chat_{event.timestamp.timestamp()}"
+    started_at = event.timestamp.isoformat()
+
+    if sender == "main":
+        kind, location = _plan_boss_chat(sm, event.timestamp, recipient)
+    elif recipient == "main":
+        kind, location = ChatKind.BOSS, ChatLocation.BOSS_DESK
+    else:
+        same_room = sm.agents[sender].room_id == sm.agents[recipient].room_id
+        kind = ChatKind.PEER
+        location = ChatLocation.ROOM if same_room else ChatLocation.MEETING_TABLE
+
+    def chat(partner: str, partner_name: str, is_speaker: bool) -> ChatInfo:
+        return ChatInfo(
+            id=chat_id,
+            partner_id=partner,
+            partner_name=partner_name,
+            text=text,
+            kind=kind,
+            location=location,
+            is_speaker=is_speaker,
+            started_at=started_at,
+        )
+
+    sm.begin_chat(sender, chat(recipient, recipient_name, is_speaker=True))
+    sm.begin_chat(recipient, chat(sender, sender_name, is_speaker=False))
+
+    if sender == "main":
+        sm.boss_bubble = BubbleContent(type=BubbleType.SPEECH, text=text or "...", icon="💬")
+
+    sm.whiteboard.add_news_item("chat", f"{sender_name} → {recipient_name}: {text[:60]}")
+
+
+def _plan_boss_chat(
+    sm: "StateMachine", now: datetime, recipient: str
+) -> tuple[ChatKind, ChatLocation]:
+    """Boss messages to several agents within a short window become a meeting."""
+    others = [
+        agent
+        for agent in sm.agents.values()
+        if agent.id != recipient
+        and agent.active_chat is not None
+        and agent.active_chat.partner_id == "main"
+        and (now - datetime.fromisoformat(agent.active_chat.started_at)).total_seconds()
+        <= MEETING_WINDOW_SECONDS
+    ]
+    if not others:
+        return ChatKind.BOSS, ChatLocation.BOSS_DESK
+
+    for agent in others:
+        assert agent.active_chat is not None
+        agent.active_chat = agent.active_chat.model_copy(
+            update={"kind": ChatKind.MEETING, "location": ChatLocation.MEETING_TABLE}
+        )
+    if sm.boss_active_chat is not None:
+        sm.boss_active_chat = sm.boss_active_chat.model_copy(
+            update={"kind": ChatKind.MEETING, "location": ChatLocation.MEETING_TABLE}
+        )
+    return ChatKind.MEETING, ChatLocation.MEETING_TABLE
 
 
 def _show_problem(
@@ -543,6 +643,7 @@ _DISPATCH_TABLE: dict[EventType, Callable[["StateMachine", AnyEvent], None]] = {
     EventType.SUBAGENT_STOP: _handle_subagent_stop,
     EventType.CLEANUP: _handle_cleanup,
     EventType.ERROR: _handle_error,
+    EventType.AGENT_MESSAGE: _handle_agent_message,
     EventType.STOP: _handle_stop,
     EventType.SESSION_END: _handle_session_end,
     EventType.BACKGROUND_TASK_NOTIFICATION: _handle_background_task_notification,
@@ -610,6 +711,10 @@ class StateMachine:
     boss_state: BossState = BossState.IDLE
     boss_bubble: BubbleContent | None = None
     boss_current_task: str | None = None  # Summarized user prompt
+    boss_active_chat: ChatInfo | None = None
+    # Chats older than this are dropped on the next snapshot, so a character
+    # never stays "chatting" if the clearing event is never attributed to it.
+    CHAT_TTL_SECONDS: float = 30.0
     elevator_state: ElevatorState = ElevatorState.CLOSED
     agents: dict[str, Agent] = field(default_factory=_empty_agents)
     arrival_queue: list[str] = field(default_factory=_empty_str_list)
@@ -680,10 +785,12 @@ class StateMachine:
         Returns:
             A GameState instance representing the current office state.
         """
+        self.expire_chats()
         boss = Boss(
             state=self.boss_state,
             current_task=self.boss_current_task,
             bubble=self.boss_bubble,
+            active_chat=self.boss_active_chat,
         )
 
         desk_count = min(
@@ -758,6 +865,73 @@ class StateMachine:
         if agent_id and agent_id in self.agents:
             return agent_id
         return "main"
+
+    def resolve_recipient(self, to: str | None) -> str | None:
+        """Map a SendMessage recipient to an agent key or ``"main"``.
+
+        Accepts native ids, our own agent keys, display names (exact, then
+        partial) and role types; returns None when nobody matches.
+        """
+        if not to:
+            return None
+        needle = to.strip()
+        lowered = needle.lower()
+        if lowered in ("main", "boss", "lead", "parent", "claude"):
+            return "main"
+        for key, agent in self.agents.items():
+            if key == needle or agent.native_id == needle:
+                return key
+        for key, agent in self.agents.items():
+            if (agent.name and agent.name.lower() == lowered) or (
+                agent.role_type and agent.role_type.lower() == lowered
+            ):
+                return key
+        for key, agent in self.agents.items():
+            name = (agent.name or "").lower()
+            if name and (lowered in name or name in lowered):
+                return key
+        return None
+
+    def begin_chat(self, key: str, chat: ChatInfo) -> None:
+        """Attach a chat to a character (boss or agent) and mark the agent as chatting."""
+        if key == "main":
+            self.boss_active_chat = chat
+            return
+        agent = self.agents.get(key)
+        if agent is None:
+            return
+        agent.active_chat = chat
+        agent.state = AgentState.CHATTING
+
+    def end_chat(self, key: str) -> None:
+        """Clear a character's chat; a chatting agent goes back to working."""
+        if key == "main":
+            self.boss_active_chat = None
+            return
+        agent = self.agents.get(key)
+        if agent is None or agent.active_chat is None:
+            return
+        agent.active_chat = None
+        if agent.state == AgentState.CHATTING:
+            agent.state = AgentState.WORKING
+
+    def expire_chats(self, now: datetime | None = None) -> None:
+        """Drop chats older than ``CHAT_TTL_SECONDS``."""
+        current = now or datetime.now(UTC)
+
+        def expired(chat: ChatInfo | None) -> bool:
+            if chat is None:
+                return False
+            started = datetime.fromisoformat(chat.started_at)
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=UTC)
+            return (current - started).total_seconds() > self.CHAT_TTL_SECONDS
+
+        if expired(self.boss_active_chat):
+            self.end_chat("main")
+        for key, agent in list(self.agents.items()):
+            if expired(agent.active_chat):
+                self.end_chat(key)
 
     def remove_agent(self, agent_id: str) -> None:
         """Remove an agent from the office and all queues.

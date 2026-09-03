@@ -219,6 +219,15 @@ export function OfficeGame(): ReactNode {
   const agents = useGameStore(useShallow(selectAgents));
   const boss = useGameStore(selectBoss);
   const issueAgentIds = useIssuesStore(useShallow(selectOpenIssueAgentIds));
+  const meetingOccupied = useMemo(
+    () =>
+      Array.from(agents.values()).some(
+        (agent) =>
+          (agent.phase === "chatting" || agent.phase === "walking_to_chat") &&
+          agent.activeChat?.location === "meeting_table",
+      ),
+    [agents],
+  );
   const todos = useGameStore(selectTodos);
   const debugMode = useGameStore(selectDebugMode);
   const showPaths = useGameStore(selectShowPaths);
@@ -508,7 +517,10 @@ export function OfficeGame(): ReactNode {
                     })}
 
                     {/* Meeting table and its chairs share the Y-sort with agents */}
-                    <MeetingTable chairTexture={textures.chair} />
+                    <MeetingTable
+                      chairTexture={textures.chair}
+                      occupied={meetingOccupied}
+                    />
 
                     {/* Agents outside elevator - zIndex based on feet Y position */}
                     {Array.from(agents.values())

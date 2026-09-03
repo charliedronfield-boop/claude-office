@@ -154,6 +154,9 @@ export const MEETING_TABLE: MeetingTable = {
   rug: { x: 912, y: 792, width: 192, height: 144 },
 };
 
+/** Where an agent stands when the boss pulls it aside (just above the boss desk). */
+export const BOSS_CHAT_SPOT: Position = { x: 640, y: 826 };
+
 // ============================================================================
 // HELPERS
 // ============================================================================

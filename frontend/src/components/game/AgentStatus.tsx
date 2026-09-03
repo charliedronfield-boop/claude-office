@@ -39,6 +39,8 @@ function getBackendStateColor(state: string) {
       return "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
     case "thinking":
       return "bg-purple-500/20 text-purple-400 border-purple-500/40";
+    case "chatting":
+      return "bg-pink-500/20 text-pink-400 border-pink-500/40";
     case "arriving":
     case "in_elevator":
       return "bg-slate-500/20 text-slate-400 border-slate-500/40";
@@ -55,6 +57,9 @@ function getPhaseColor(phase: string) {
     case "wandering":
     case "returning_to_desk":
       return "bg-teal-500/20 text-teal-400 border-teal-500/40";
+    case "walking_to_chat":
+    case "chatting":
+      return "bg-pink-500/20 text-pink-400 border-pink-500/40";
     case "arriving":
     case "in_arrival_queue":
     case "walking_to_ready":

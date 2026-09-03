@@ -61,6 +61,7 @@ from app.models.agents import AgentState
 from app.models.common import TodoItem
 from app.models.events import (
     AgentEvent,
+    AgentMessageEvent,
     AnyEvent,
     BackgroundTaskEvent,
     EventAdapter,
@@ -567,6 +568,8 @@ class EventProcessor:
             ("notification_type", "notificationType"),
             ("native_agent_id", "nativeAgentId"),
             ("background_task_status", "backgroundTaskStatus"),
+            ("to", "to"),
+            ("message_text", "messageText"),
         ]:
             val = getattr(event.data, src, None)
             if val is not None:
@@ -1269,6 +1272,13 @@ class EventProcessor:
                 assert isinstance(event, LifecycleEvent)
                 name = event.data.teammate_name or "Teammate"
                 return f"{name} went idle"
+            case EventType.AGENT_MESSAGE:
+                assert isinstance(event, AgentMessageEvent)
+                sender = event.data.agent_id or "main"
+                text = event.data.summary or event.data.message_text or ""
+                if len(text) > 60:
+                    text = f"{text[:57]}..."
+                return f"{sender} → {event.data.to or 'someone'}: {text}"
             case _:
                 return f"Event: {event.event_type}"
 

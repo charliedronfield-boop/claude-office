@@ -20,6 +20,7 @@
  */
 
 import { setup, assign, type ActorRefFrom } from "xstate";
+import type { Position } from "@/types";
 import {
   buildSharedActions,
   sharedGuards,
@@ -40,6 +41,12 @@ export type {
 // ============================================================================
 // MACHINE DEFINITION
 // ============================================================================
+
+interface ChatParams {
+  spot: Position;
+  text: string;
+  speaker: boolean;
+}
 
 export const createAgentMachine = (actions: AgentMachineActions) =>
   setup({
@@ -68,6 +75,14 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
       }),
       resetConversationStep: assign({
         conversationStep: 0,
+      }),
+      setChat: assign({
+        chatSpot: (_, params: ChatParams) => params.spot,
+        chatText: (_, params: ChatParams) => params.text,
+        chatSpeaker: (_, params: ChatParams) => params.speaker,
+      }),
+      markChatStarted: assign({
+        chatStartedAt: () => Date.now(),
       }),
     },
     guards: {
@@ -98,6 +113,20 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
           REMOVE: {
             target: "departure.departing",
             actions: ["setQueueTypeDeparture"],
+          },
+          // A chat pre-empts sitting and strolling alike.
+          CHAT_START: {
+            target: ".walking_to_chat",
+            actions: [
+              {
+                type: "setChat",
+                params: ({ event }) => ({
+                  spot: event.spot,
+                  text: event.text,
+                  speaker: event.speaker,
+                }),
+              },
+            ],
           },
         },
         states: {
@@ -145,6 +174,39 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
             ],
             on: {
               ARRIVED_AT_DESK: "at_desk",
+            },
+          },
+
+          // Chat scene: walk to the spot, talk (or listen), then head back.
+          // CHAT_END is ignored until the agent has arrived so the scene
+          // always plays out visibly.
+          walking_to_chat: {
+            entry: [
+              {
+                type: "notifyPhaseChange",
+                params: { phase: "walking_to_chat" },
+              },
+              "startWalkingToChatSpot",
+            ],
+            on: {
+              ARRIVED_AT_SPOT: "chatting",
+            },
+          },
+
+          chatting: {
+            entry: [
+              { type: "notifyPhaseChange", params: { phase: "chatting" } },
+              "markChatStarted",
+              "showChatBubble",
+            ],
+            after: {
+              CHAT_DURATION: "returning_to_desk",
+            },
+            on: {
+              CHAT_END: {
+                target: "returning_to_desk",
+                guard: "chatMinimumElapsed",
+              },
             },
           },
         },

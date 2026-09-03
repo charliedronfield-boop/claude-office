@@ -154,6 +154,7 @@ Or edit the config file and restart Claude Code.
 | `SessionEnd` | `session_end` | Cleanup, boss leaves |
 | `PreToolUse` | `pre_tool_use` | Show working state |
 | `PreToolUse` (Task) | `subagent_start` | Spawn employee agent |
+| `PreToolUse` (SendMessage) | `agent_message` | Two characters pull each other aside for a chat |
 | `PostToolUse` | `post_tool_use` | Clear working state |
 | `PostToolUse` (Task) | `subagent_stop` | Employee completes work |
 | `PostToolUseFailure` | `post_tool_use` (`success: false`) | Tool failure shows up in the Issues panel |

@@ -23,6 +23,11 @@ import {
 import type { Agent, GameState, Position } from "@/types";
 import { MIN_DESK_COUNT } from "@/constants/positions";
 
+/** Identity of a chat for change detection: a relocation counts as new. */
+function chatKey(chat: Agent["activeChat"]): string | null {
+  return chat ? `${chat.id}:${chat.location}` : null;
+}
+
 // ============================================================================
 // SPAWN-POLICY (pure) — the 4-way branch extracted from handleStateUpdate.
 // ============================================================================
@@ -184,6 +189,8 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
     } else if (currentAgentIds.has(backendAgent.id)) {
       const agent = store.agents.get(backendAgent.id);
       const stateChanged = agent?.backendState !== backendAgent.state;
+      const previousChat = chatKey(agent?.activeChat);
+      const nextChat = chatKey(backendAgent.activeChat);
 
       // Update existing agent's backend state, name, and task.
       // (Name and task may have been enriched by AI after initial spawn.)
@@ -192,6 +199,7 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
         name: backendAgent.name ?? null,
         currentTask: backendAgent.currentTask ?? null,
         nativeId: backendAgent.nativeId ?? null,
+        activeChat: backendAgent.activeChat ?? null,
       });
 
       // Enqueue bubbles for agents who are at their desk working.
@@ -216,6 +224,14 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
 
       if (stateChanged || hasNewBubble) {
         agentMachineService.notifyActivity(backendAgent.id);
+      }
+
+      // Chats: a new (or relocated) chat sends the agent to its spot; a
+      // cleared one calls it back.
+      if (nextChat && nextChat !== previousChat && backendAgent.activeChat) {
+        agentMachineService.startChat(backendAgent.id, backendAgent.activeChat);
+      } else if (!nextChat && previousChat) {
+        agentMachineService.endChat(backendAgent.id);
       }
     }
   }

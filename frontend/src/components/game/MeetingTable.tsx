@@ -12,18 +12,26 @@ import { MEETING_TABLE, TILE_PX } from "@/systems/officeRooms";
 
 interface MeetingTableProps {
   chairTexture: Texture | null;
+  /** True while a chat is happening at the table — draws a soft glow. */
+  occupied?: boolean;
 }
 
 const TABLE_TOP_COLOR = 0x9a6a3c;
 const TABLE_EDGE_COLOR = 0x5c3a1e;
 const TABLE_HIGHLIGHT_COLOR = 0xb8865a;
+const GLOW_COLOR = 0x60a5fa;
 const CHAIR_SCALE = 0.1386;
 
-function drawTable(g: Graphics): void {
+function drawTable(g: Graphics, occupied: boolean): void {
   g.clear();
   const { block } = MEETING_TABLE;
   const width = (block.gx2 - block.gx1 + 1) * TILE_PX;
   const height = (block.gy2 - block.gy1 + 1) * TILE_PX;
+
+  if (occupied) {
+    g.ellipse(0, 2, width / 2 + 14, height / 2 + 12);
+    g.fill({ color: GLOW_COLOR, alpha: 0.22 });
+  }
 
   // Shadow, edge, then top — an oval reads as a proper meeting table.
   g.ellipse(2, 6, width / 2, height / 2);
@@ -36,8 +44,14 @@ function drawTable(g: Graphics): void {
   g.stroke({ width: 2, color: TABLE_HIGHLIGHT_COLOR, alpha: 0.5 });
 }
 
-export function MeetingTable({ chairTexture }: MeetingTableProps): ReactNode {
-  const drawTableCallback = useCallback((g: Graphics) => drawTable(g), []);
+export function MeetingTable({
+  chairTexture,
+  occupied = false,
+}: MeetingTableProps): ReactNode {
+  const drawTableCallback = useCallback(
+    (g: Graphics) => drawTable(g, occupied),
+    [occupied],
+  );
   const { center, seats, block } = MEETING_TABLE;
   const tableBottomY = (block.gy2 + 1) * TILE_PX;
 

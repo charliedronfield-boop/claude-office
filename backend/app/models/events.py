@@ -66,6 +66,7 @@ class EventType(StrEnum):
     TASK_CREATED = "task_created"
     TASK_COMPLETED = "task_completed"
     TEAMMATE_IDLE = "teammate_idle"
+    AGENT_MESSAGE = "agent_message"
 
 
 class EventData(BaseModel):
@@ -362,6 +363,19 @@ class BackgroundTaskEvent(_EventBase):
     data: BackgroundTaskEventData
 
 
+class AgentMessageEventData(EventDataBase):
+    """Payload for AGENT_MESSAGE: one character messaging another (SendMessage)."""
+
+    to: str | None = None
+    message_text: str | None = None
+    tool_use_id: str | None = None
+
+
+class AgentMessageEvent(_EventBase):
+    event_type: Literal[EventType.AGENT_MESSAGE]
+    data: AgentMessageEventData
+
+
 # Discriminated union over event_type. FastAPI/Pydantic routes an incoming
 # payload to the correct variant based on the Literal tag, so handlers typed
 # as `event: AnyEvent` narrow to a family-specific payload via match/isinstance.
@@ -372,7 +386,8 @@ AnyEvent = Annotated[
     | AgentEvent
     | LifecycleEvent
     | TaskEvent
-    | BackgroundTaskEvent,
+    | BackgroundTaskEvent
+    | AgentMessageEvent,
     Field(discriminator="event_type"),
 ]
 

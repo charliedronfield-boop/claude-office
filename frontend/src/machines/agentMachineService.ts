@@ -33,7 +33,13 @@ import {
   getReadyPosition,
   getElevatorPathTarget,
 } from "./positionHelpers";
-import { getRoomForDesk, wanderTiles } from "@/systems/officeRooms";
+import {
+  BOSS_CHAT_SPOT,
+  MEETING_TABLE,
+  getRoomForDesk,
+  wanderTiles,
+} from "@/systems/officeRooms";
+import type { ChatInfo } from "@/types/generated";
 
 /** Quiet time (no backend activity) before an agent may leave its desk. */
 const WANDER_IDLE_THRESHOLD_MS = 15_000;
@@ -69,6 +75,9 @@ class AgentMachineService implements AnimationListener {
    * down).
    */
   private pendingDepartures: Set<string> = new Set();
+
+  /** Meeting-table seat index held by each agent currently in a table chat. */
+  private meetingSeats: Map<string, number> = new Map();
 
   /**
    * Deferred-notification queue (QA-009). Replaces the six ``setTimeout(…, 0)``
@@ -216,6 +225,7 @@ class AgentMachineService implements AnimationListener {
       walking_to_elevator: "ARRIVED_AT_ELEVATOR",
       wandering: "ARRIVED_AT_SPOT",
       returning_to_desk: "ARRIVED_AT_DESK",
+      walking_to_chat: "ARRIVED_AT_SPOT",
     };
 
     const eventType = eventMap[phase];
@@ -232,6 +242,60 @@ class AgentMachineService implements AnimationListener {
     if (!this.agents.has(agentId)) return;
     useGameStore.getState().touchAgentActivity(agentId);
     this.sendEvent(agentId, { type: "RETURN_TO_DESK" });
+  }
+
+  /**
+   * Send an agent to its chat spot: the boss desk, its room's chat nook, or a
+   * free seat at the meeting table.
+   */
+  startChat(agentId: string, chat: ChatInfo): void {
+    if (!this.agents.has(agentId)) return;
+    const spot = this.resolveChatSpot(agentId, chat);
+    if (!spot) return;
+    this.sendEvent(agentId, {
+      type: "CHAT_START",
+      spot,
+      text: chat.text,
+      speaker: chat.isSpeaker,
+    });
+  }
+
+  endChat(agentId: string): void {
+    this.sendEvent(agentId, { type: "CHAT_END" });
+  }
+
+  private resolveChatSpot(agentId: string, chat: ChatInfo): Position | null {
+    const agent = useGameStore.getState().agents.get(agentId);
+    if (!agent) return null;
+
+    switch (chat.location) {
+      case "boss_desk":
+        return BOSS_CHAT_SPOT;
+      case "room": {
+        const room = getRoomForDesk(agent.desk);
+        if (!room) return null;
+        return chat.isSpeaker ? room.chatSpots[0] : room.chatSpots[1];
+      }
+      case "meeting_table":
+        return this.claimMeetingSeat(agentId);
+      default:
+        return null;
+    }
+  }
+
+  private claimMeetingSeat(agentId: string): Position | null {
+    const held = this.meetingSeats.get(agentId);
+    if (held !== undefined) return MEETING_TABLE.seats[held];
+
+    const taken = new Set(this.meetingSeats.values());
+    const free = MEETING_TABLE.seats.findIndex((_, index) => !taken.has(index));
+    if (free === -1) return null;
+    this.meetingSeats.set(agentId, free);
+    return MEETING_TABLE.seats[free];
+  }
+
+  private releaseMeetingSeat(agentId: string): void {
+    this.meetingSeats.delete(agentId);
   }
 
   /**
@@ -301,6 +365,7 @@ class AgentMachineService implements AnimationListener {
     this.queue.reset();
     this.elevatorUsageCount = 0;
     this.pendingDepartures.clear();
+    this.meetingSeats.clear();
     this.deferred = [];
     this.flushScheduled = false;
   }
@@ -597,6 +662,11 @@ class AgentMachineService implements AnimationListener {
     // Release elevator position when agent leaves the arriving phase
     if (previousPhase === "arriving" && phase !== "arriving") {
       releaseElevatorPosition(agentId);
+    }
+
+    // A meeting seat is only held while heading to or sitting in a chat.
+    if (phase !== "walking_to_chat" && phase !== "chatting") {
+      this.releaseMeetingSeat(agentId);
     }
 
     // Snap agent to departure position when entering elevator

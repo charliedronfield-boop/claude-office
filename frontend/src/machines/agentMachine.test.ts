@@ -125,3 +125,60 @@ describe("agentMachine idle wandering", () => {
     expect(actor.getSnapshot().matches({ idle: "at_desk" })).toBe(true);
   });
 });
+
+describe("agentMachine chats", () => {
+  const spot = { x: 640, y: 826 };
+
+  it("walks to the chat spot, speaks, and returns when the chat runs out", () => {
+    const actions = buildActions(false);
+    const { actor, clock } = spawnAtDesk(actions);
+
+    actor.send({ type: "CHAT_START", spot, text: "Trim the intro", speaker: true });
+    expect(actor.getSnapshot().matches({ idle: "walking_to_chat" })).toBe(true);
+    expect(actions.onStartWalking).toHaveBeenLastCalledWith("a1", spot, "to_chat_spot");
+
+    actor.send({ type: "ARRIVED_AT_SPOT" });
+    expect(actor.getSnapshot().matches({ idle: "chatting" })).toBe(true);
+    expect(actions.onShowAgentBubble).toHaveBeenLastCalledWith("a1", "Trim the intro", "💬");
+
+    clock.increment(20_000);
+    expect(actor.getSnapshot().matches({ idle: "returning_to_desk" })).toBe(true);
+  });
+
+  it("listens quietly when it is not the speaker", () => {
+    const actions = buildActions(false);
+    const { actor } = spawnAtDesk(actions);
+
+    actor.send({ type: "CHAT_START", spot, text: "Trim the intro", speaker: false });
+    actor.send({ type: "ARRIVED_AT_SPOT" });
+    expect(actions.onShowAgentBubble).toHaveBeenLastCalledWith("a1", "...", "👂");
+  });
+
+  it("pre-empts a stroll and ignores an early CHAT_END until the scene has played", () => {
+    const actions = buildActions(true);
+    const { actor, clock } = spawnAtDesk(actions);
+
+    clock.increment(WANDER_DELAY);
+    expect(actor.getSnapshot().matches({ idle: "wandering" })).toBe(true);
+
+    actor.send({ type: "CHAT_START", spot, text: "hi", speaker: true });
+    expect(actor.getSnapshot().matches({ idle: "walking_to_chat" })).toBe(true);
+
+    actor.send({ type: "CHAT_END" });
+    expect(actor.getSnapshot().matches({ idle: "walking_to_chat" })).toBe(true);
+
+    actor.send({ type: "ARRIVED_AT_SPOT" });
+    actor.send({ type: "CHAT_END" });
+    expect(actor.getSnapshot().matches({ idle: "chatting" })).toBe(true);
+  });
+
+  it("departs mid-chat when removed", () => {
+    const actions = buildActions(false);
+    const { actor } = spawnAtDesk(actions);
+
+    actor.send({ type: "CHAT_START", spot, text: "hi", speaker: true });
+    actor.send({ type: "ARRIVED_AT_SPOT" });
+    actor.send({ type: "REMOVE" });
+    expect(actor.getSnapshot().matches({ departure: "departing" })).toBe(true);
+  });
+});

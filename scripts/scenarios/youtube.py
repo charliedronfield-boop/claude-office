@@ -174,6 +174,56 @@ def _agent_workflow(
     )
 
 
+CHATS: list[tuple[float, str, str, str, str | None]] = [
+    # (seconds after the crew starts, sender, recipient, message, summary)
+    (
+        70,
+        "main",
+        "yt_scripter",
+        "Keep the cold open under 15 seconds — hook first, context later.",
+        "Hook under 15s",
+    ),
+    (
+        30,
+        "yt_scripter",
+        "yt_editor",
+        "Script is locked. The cold open runs 12s — trim the B-roll to match.",
+        None,
+    ),
+    (
+        30,
+        "main",
+        "yt_thumbs",
+        "Quick sync: the thumbnail text has to match the final title.",
+        "Thumbnail/title sync",
+    ),
+    (
+        5,
+        "main",
+        "yt_publisher",
+        "Quick sync: hold the schedule until the thumbnail text is final.",
+        "Thumbnail/title sync",
+    ),
+]
+
+
+def _chats(ctx: SimulationContext) -> None:
+    """Fire the inter-agent messages that trigger chat and meeting scenes."""
+    for index, (delay, sender, recipient, message, summary) in enumerate(CHATS):
+        time.sleep(delay)
+        ctx.log(f"[chat] {sender} -> {recipient}: {message[:40]}...")
+        ctx.send_event(
+            "agent_message",
+            {
+                "agent_id": sender,
+                "to": recipient,
+                "message_text": message,
+                "summary": summary,
+                "tool_use_id": f"msg_{index + 1}",
+            },
+        )
+
+
 def run(ctx: SimulationContext) -> None:
     """Execute the YouTube production scenario against *ctx*."""
     ctx.reset(initial_fraction=0.1)
@@ -202,6 +252,9 @@ def run(ctx: SimulationContext) -> None:
     ]
     for thread in threads:
         thread.start()
+    chat_thread = threading.Thread(target=_chats, args=(ctx,))
+    chat_thread.start()
+    threads.append(chat_thread)
 
     # Meanwhile the boss trips over auto mode.
     time.sleep(45)

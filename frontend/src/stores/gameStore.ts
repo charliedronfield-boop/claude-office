@@ -90,6 +90,7 @@ export interface GameStore {
       name: string | null;
       currentTask: string | null;
       nativeId?: string | null;
+      activeChat?: BackendAgent["activeChat"];
     },
   ) => void;
   updateAgentQueueInfo: (

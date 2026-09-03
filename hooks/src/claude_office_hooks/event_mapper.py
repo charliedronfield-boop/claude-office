@@ -131,8 +131,37 @@ def _handle_pre_tool_use(
         # Drop the raw tool_input — we've extracted what we need. pop() is used
         # instead of del so this is safe even if tool_input was never set.
         data.pop("tool_input", None)
+    elif _is_message_tool(data["tool_name"]):
+        _handle_agent_message(raw_data, payload, data)
     else:
         data["agent_id"] = "main"
+
+
+def _is_message_tool(tool_name: object) -> bool:
+    """Claude Code's inter-agent messaging tool (built-in or MCP flavoured)."""
+    return isinstance(tool_name, str) and (
+        tool_name == "SendMessage" or tool_name.endswith("send_message")
+    )
+
+
+def _handle_agent_message(
+    raw_data: dict[str, Any],
+    payload: dict[str, Any],
+    data: dict[str, Any],
+) -> None:
+    """Remap a SendMessage call to agent_message (who said what to whom)."""
+    payload["event_type"] = "agent_message"
+    tool_input_raw = raw_data.get("tool_input", {})
+    tool_input = cast(dict[str, Any], tool_input_raw) if isinstance(tool_input_raw, dict) else {}
+    recipient = tool_input.get("to") or tool_input.get("session_id")
+    message = tool_input.get("message")
+    summary = tool_input.get("summary")
+    data["to"] = str(recipient) if recipient else None
+    data["message_text"] = message[:240] if isinstance(message, str) else None
+    data["summary"] = summary if isinstance(summary, str) else None
+    data["agent_id"] = "main"
+    data.pop("tool_input", None)
+    _attach_native_agent(raw_data, data)
 
 
 def _handle_post_tool_use(
