@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import httpx
 from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -562,6 +563,21 @@ class EventProcessor:
                     tool_name=event.data.tool_name,
                     tool_input=event.data.tool_input,
                 )
+                self._notify_critical_issue(
+                    f"⚠️ {event.data.tool_name or 'A tool'} needs your approval",
+                    session_id=event.session_id,
+                )
+
+        # Critical issues (auto-mode denials, turn/API failures) optionally
+        # push to a webhook — see Settings.CRITICAL_ISSUE_WEBHOOK_URL.
+        if event.event_type == EventType.ERROR:
+            assert isinstance(event, LifecycleEvent)
+            if event.data.error_type in ("permission_denied", "stop_failure"):
+                label = (event.data.error_type or "error").replace("_", " ").capitalize()
+                self._notify_critical_issue(
+                    f"🔴 {label}: {event.data.message or 'see the Issues panel'}",
+                    session_id=event.session_id,
+                )
 
         # Apply resolved floor/room to in-memory state machine.
         if resolved_floor_id:
@@ -979,6 +995,27 @@ class EventProcessor:
         if sm is not None:
             async with self._sessions_lock:
                 self.sessions[session_id] = sm
+
+    def _notify_critical_issue(self, message: str, *, session_id: str) -> None:
+        """Fire-and-forget POST of *message* to Settings.CRITICAL_ISSUE_WEBHOOK_URL.
+
+        No-op when the setting is empty (the default). Scheduled as a
+        background task rather than awaited: a slow or unreachable webhook
+        must never add latency to event processing, and any failure is
+        logged, not raised.
+        """
+        url = get_settings().CRITICAL_ISSUE_WEBHOOK_URL
+        if not url:
+            return
+
+        async def _post() -> None:
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    await client.post(url, json={"text": message, "sessionId": session_id})
+            except Exception:
+                logger.warning("Critical-issue webhook POST failed", exc_info=True)
+
+        asyncio.create_task(_post())
 
     async def _note_agent_message(self, sm: StateMachine, event: AgentMessageEvent) -> None:
         """Append a real inter-agent chat to whichever agent's room it happened in."""

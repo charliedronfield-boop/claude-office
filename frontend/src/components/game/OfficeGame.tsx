@@ -100,6 +100,7 @@ import { RoomWalls } from "./RoomWalls";
 import { MeetingTable } from "./MeetingTable";
 import { IssueMarker } from "./IssueMarker";
 import { useIssuesStore, selectOpenIssueAgentIds } from "@/stores/issuesStore";
+import { getRoomForDesk } from "@/systems/officeRooms";
 
 // Register PixiJS components
 extend({ Container, Text, Graphics, Sprite });
@@ -582,6 +583,7 @@ export function OfficeGame(): ReactNode {
                           key={`headset-${agent.id}`}
                           position={agent.currentPosition}
                           headsetTexture={textures.headset!}
+                          tint={getRoomForDesk(agent.desk)?.accent}
                         />
                       ))}
 
