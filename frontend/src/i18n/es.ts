@@ -154,6 +154,16 @@ const es: Record<TranslationKey, string> = {
   "issues.decideHint":
     "Aprobar/Denegar responde directamente si la solicitud sigue esperando; si no, usa Abrir terminal.",
 
+  // Replay
+  "replay.start": "Repetición",
+  "replay.loading": "Cargando…",
+  "replay.play": "Reproducir",
+  "replay.pause": "Pausar",
+  "replay.exit": "Salir de la repetición",
+  "replay.finished": "Listo",
+  "replay.empty": "Aún no hay nada que repetir",
+  "replay.fetchFailed": "No se pudo cargar la repetición",
+
   // Event Log
   "eventLog.title": "Registro de Eventos",
   "eventLog.events": "eventos",

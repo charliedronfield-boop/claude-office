@@ -49,6 +49,7 @@ import { TourOverlay } from "@/components/tour/TourOverlay";
 import CommandBar from "@/components/attention/CommandBar";
 import AttentionToasts from "@/components/attention/AttentionToasts";
 import AgentPopup from "@/components/attention/AgentPopup";
+import { ReplayControls } from "@/components/layout/ReplayControls";
 import { useAttentionStore } from "@/stores/attentionStore";
 import { usePreferencesStore } from "@/stores/preferencesStore";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -587,6 +588,7 @@ export default function V2TestPage(): React.ReactNode {
       <CommandBar />
       <AttentionToasts />
       <AgentPopup />
+      <ReplayControls />
 
       {/* ----------------------------------------------------------------
           Tour Overlay

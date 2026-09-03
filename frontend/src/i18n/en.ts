@@ -152,6 +152,16 @@ const en = {
   "issues.decideHint":
     "Approve/Deny answers the prompt directly if it's still waiting on you; otherwise use Open Terminal.",
 
+  // Replay
+  "replay.start": "Replay",
+  "replay.loading": "Loading…",
+  "replay.play": "Play",
+  "replay.pause": "Pause",
+  "replay.exit": "Exit replay",
+  "replay.finished": "Done",
+  "replay.empty": "Nothing to replay yet",
+  "replay.fetchFailed": "Couldn't load replay",
+
   // Event Log
   "eventLog.title": "Event Log",
   "eventLog.events": "events",

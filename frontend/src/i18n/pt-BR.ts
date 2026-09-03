@@ -154,6 +154,16 @@ const ptBR: Record<TranslationKey, string> = {
   "issues.decideHint":
     "Aprovar/Negar responde diretamente se o pedido ainda estiver esperando; caso contrário, use Abrir terminal.",
 
+  // Replay
+  "replay.start": "Repetição",
+  "replay.loading": "Carregando…",
+  "replay.play": "Reproduzir",
+  "replay.pause": "Pausar",
+  "replay.exit": "Sair da repetição",
+  "replay.finished": "Concluído",
+  "replay.empty": "Ainda não há nada para repetir",
+  "replay.fetchFailed": "Não foi possível carregar a repetição",
+
   // Event Log
   "eventLog.title": "Log de Eventos",
   "eventLog.events": "eventos",
