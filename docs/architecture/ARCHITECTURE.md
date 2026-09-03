@@ -754,6 +754,22 @@ id = "main-app"
 repo_name = "my-application"
 ```
 
+#### One floor per YouTube channel
+
+Floor assignment does not require Agent Teams — `ProductMapper.resolve()` (`backend/app/core/product_mapper.py`) runs for every event whenever a `building_config` is configured, matching on the **basename of the session's git repo directory** (falling back to `project_name`, then `working_dir`). So running each channel's work from its own separately-named repo (e.g. `~/channels/alpha-channel/`, `~/channels/beta-channel/`, each its own `.git`) is enough to get one floor per channel, with each channel's own YouTube-role rooms (Scripting/Editing/Thumbnails & SEO/Publishing) inside it — no Agent Teams env var needed, no code changes.
+
+The easiest way to set it up is the existing Settings → Building tab (`frontend/src/components/settings/BuildingTab.tsx`), which edits this same config through `PUT /api/v1/preferences/building_config`. Equivalently, PUT the JSON directly:
+
+```bash
+curl -X PUT http://localhost:8000/api/v1/preferences/building_config \
+  -H "Content-Type: application/json" \
+  -d '{"value":"{\"buildingName\":\"YouTube Studio\",\"floors\":[{\"id\":\"alpha\",\"name\":\"Alpha Channel\",\"floorNumber\":2,\"accent\":\"#3B82F6\",\"icon\":\"🎬\",\"rooms\":[{\"id\":\"alpha-repo\",\"repoName\":\"alpha-channel\"}]},{\"id\":\"beta\",\"name\":\"Beta Channel\",\"floorNumber\":1,\"accent\":\"#F97316\",\"icon\":\"🎥\",\"rooms\":[{\"id\":\"beta-repo\",\"repoName\":\"beta-channel\"}]}]}"}'
+```
+
+(The `value` field is itself a JSON string — keep it on one line; a literal newline inside it is invalid JSON.)
+
+Each session then resolves onto its channel's floor automatically the next time it fires an event from that repo, and the Building/Floor navigation (`BuildingView`/`FloorView`, driven by `useFloorConfig`/`navigationStore`) lets you click between channels. `backend/tests/test_product_mapper.py` covers the resolution logic this relies on.
+
 ### API Endpoints
 
 | Method | Path | Description |
