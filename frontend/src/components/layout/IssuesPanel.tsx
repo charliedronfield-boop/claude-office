@@ -85,22 +85,13 @@ export function IssuesPanel() {
       </div>
 
       {selected && (
-        <IssueDetailModal
-          issue={selected}
-          onClose={() => setSelected(null)}
-        />
+        <IssueDetailModal issue={selected} onClose={() => setSelected(null)} />
       )}
     </>
   );
 }
 
-function IssueCard({
-  issue,
-  onClick,
-}: {
-  issue: Issue;
-  onClick: () => void;
-}) {
+function IssueCard({ issue, onClick }: { issue: Issue; onClick: () => void }) {
   const { t } = useTranslation();
   const resolved = issue.resolvedAt !== null;
   const actor =
@@ -136,7 +127,10 @@ function IssueCard({
           {format(issue.createdAt, "HH:mm:ss")}
         </span>
       </div>
-      <div className="text-slate-400 text-[10px] truncate" title={issue.description}>
+      <div
+        className="text-slate-400 text-[10px] truncate"
+        title={issue.description}
+      >
         <span className="text-blue-400">{actor}</span> · {issue.description}
       </div>
     </div>

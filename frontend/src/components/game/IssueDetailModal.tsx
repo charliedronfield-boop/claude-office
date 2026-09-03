@@ -11,7 +11,11 @@ import { format } from "date-fns";
 import type { Issue } from "@/systems/issueClassifier";
 import { useIssuesStore } from "@/stores/issuesStore";
 import { useAttentionStore } from "@/stores/attentionStore";
-import { useGameStore, selectSessionId, selectAgents } from "@/stores/gameStore";
+import {
+  useGameStore,
+  selectSessionId,
+  selectAgents,
+} from "@/stores/gameStore";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getRoomForDesk } from "@/systems/officeRooms";
 import { SEVERITY_BADGE_CLASSES, SEVERITY_ICONS } from "./issueStyles";
@@ -54,7 +58,11 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
   };
 
   const handleCopy = async () => {
-    const text = [issue.title, issue.description, issue.toolInput ? JSON.stringify(issue.toolInput, null, 2) : ""]
+    const text = [
+      issue.title,
+      issue.description,
+      issue.toolInput ? JSON.stringify(issue.toolInput, null, 2) : "",
+    ]
       .filter(Boolean)
       .join("\n\n");
     try {
@@ -91,7 +99,8 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
           <span
             className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider ${SEVERITY_BADGE_CLASSES[issue.severity]}`}
           >
-            {SEVERITY_ICONS[issue.severity]} {t(`issues.severity.${issue.severity}`)}
+            {SEVERITY_ICONS[issue.severity]}{" "}
+            {t(`issues.severity.${issue.severity}`)}
           </span>
           <span className="text-slate-200 text-[12px] font-bold truncate">
             {issue.title}

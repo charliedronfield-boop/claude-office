@@ -58,7 +58,10 @@ describe("issuesStore", () => {
 
     store.resolveWaitingFor("a1");
     let open = selectOpenIssues(useIssuesStore.getState());
-    expect(open.map((i) => i.kind).sort()).toEqual(["needs_input", "tool_failure"]);
+    expect(open.map((i) => i.kind).sort()).toEqual([
+      "needs_input",
+      "tool_failure",
+    ]);
 
     store.resolveWaitingFor(null);
     open = selectOpenIssues(useIssuesStore.getState());

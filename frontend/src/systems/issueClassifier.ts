@@ -50,7 +50,8 @@ type IncomingEvent = NonNullable<WebSocketMessage["event"]>;
 const TOOL_FAILURE_SUGGESTIONS: Record<string, string> = {
   Bash: "Open the terminal to read the command output, fix the underlying error and let the agent re-run it.",
   Edit: "The edit did not apply — check the file path exists and the text being replaced still matches.",
-  Write: "The write failed — check the path is writable and the directory exists.",
+  Write:
+    "The write failed — check the path is writable and the directory exists.",
   Read: "The file could not be read — check the path and that it has not been moved or deleted.",
 };
 
@@ -70,7 +71,10 @@ function makeId(event: IncomingEvent, kind: IssueKind): string {
 function build(
   event: IncomingEvent,
   actor: IssueActor,
-  fields: Pick<Issue, "kind" | "severity" | "title" | "description" | "suggestion">,
+  fields: Pick<
+    Issue,
+    "kind" | "severity" | "title" | "description" | "suggestion"
+  >,
 ): Issue {
   const detail = event.detail ?? {};
   return {
@@ -81,7 +85,9 @@ function build(
     toolName: detail.toolName ?? null,
     toolInput: detail.toolInput ?? null,
     eventType: event.type,
-    createdAt: event.timestamp ? new Date(event.timestamp).getTime() : Date.now(),
+    createdAt: event.timestamp
+      ? new Date(event.timestamp).getTime()
+      : Date.now(),
     resolvedAt: null,
     dismissed: false,
   };
@@ -105,7 +111,8 @@ export function classifyIssue(
         kind: "tool_failure",
         severity: "high",
         title: `${toolName} failed`,
-        description: detail.message ?? detail.errorType ?? "The tool call failed.",
+        description:
+          detail.message ?? detail.errorType ?? "The tool call failed.",
         suggestion:
           TOOL_FAILURE_SUGGESTIONS[toolName] ?? DEFAULT_TOOL_FAILURE_SUGGESTION,
       });
@@ -161,7 +168,8 @@ export function classifyIssue(
           severity: "critical",
           title: "Waiting for your approval",
           description: detail.message ?? event.summary,
-          suggestion: "Switch to the terminal and answer the permission prompt.",
+          suggestion:
+            "Switch to the terminal and answer the permission prompt.",
         });
       }
       if (notificationType === "agent_needs_input") {

@@ -133,25 +133,49 @@ describe("agentMachine chats", () => {
     const actions = buildActions(false);
     const { actor, clock } = spawnAtDesk(actions);
 
-    actor.send({ type: "CHAT_START", spot, text: "Trim the intro", speaker: true });
+    actor.send({
+      type: "CHAT_START",
+      spot,
+      text: "Trim the intro",
+      speaker: true,
+    });
     expect(actor.getSnapshot().matches({ idle: "walking_to_chat" })).toBe(true);
-    expect(actions.onStartWalking).toHaveBeenLastCalledWith("a1", spot, "to_chat_spot");
+    expect(actions.onStartWalking).toHaveBeenLastCalledWith(
+      "a1",
+      spot,
+      "to_chat_spot",
+    );
 
     actor.send({ type: "ARRIVED_AT_SPOT" });
     expect(actor.getSnapshot().matches({ idle: "chatting" })).toBe(true);
-    expect(actions.onShowAgentBubble).toHaveBeenLastCalledWith("a1", "Trim the intro", "💬");
+    expect(actions.onShowAgentBubble).toHaveBeenLastCalledWith(
+      "a1",
+      "Trim the intro",
+      "💬",
+    );
 
     clock.increment(20_000);
-    expect(actor.getSnapshot().matches({ idle: "returning_to_desk" })).toBe(true);
+    expect(actor.getSnapshot().matches({ idle: "returning_to_desk" })).toBe(
+      true,
+    );
   });
 
   it("listens quietly when it is not the speaker", () => {
     const actions = buildActions(false);
     const { actor } = spawnAtDesk(actions);
 
-    actor.send({ type: "CHAT_START", spot, text: "Trim the intro", speaker: false });
+    actor.send({
+      type: "CHAT_START",
+      spot,
+      text: "Trim the intro",
+      speaker: false,
+    });
     actor.send({ type: "ARRIVED_AT_SPOT" });
-    expect(actions.onShowAgentBubble).toHaveBeenLastCalledWith("a1", "...", "👂");
+    expect(actions.onShowAgentBubble).toHaveBeenLastCalledWith(
+      "a1",
+      "...",
+      "👂",
+    );
   });
 
   it("pre-empts a stroll and ignores an early CHAT_END until the scene has played", () => {

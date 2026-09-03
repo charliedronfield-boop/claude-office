@@ -48,7 +48,12 @@ describe("officeRooms reachability", () => {
   it("reaches every desk seat from the boss slot through its room door", () => {
     for (let desk = 1; desk <= 8; desk++) {
       const room = getRoomForDesk(desk)!;
-      const path = findPath(BOSS_SLOT_LEFT, getDeskPosition(desk), undefined, grid);
+      const path = findPath(
+        BOSS_SLOT_LEFT,
+        getDeskPosition(desk),
+        undefined,
+        grid,
+      );
       expect(path.length, `desk ${desk}`).toBeGreaterThan(0);
 
       const doorTile = path.find((p) => p.gy === ROOM_BOTTOM_WALL_GY);
@@ -64,7 +69,9 @@ describe("officeRooms reachability", () => {
       for (const tile of wanderTiles(room)) {
         expect(isInsideRoom(room, tile)).toBe(true);
         const path = findPath(seat, tile, undefined, grid);
-        expect(path.length, `${room.id} → ${tile.x},${tile.y}`).toBeGreaterThan(0);
+        expect(path.length, `${room.id} → ${tile.x},${tile.y}`).toBeGreaterThan(
+          0,
+        );
         for (const step of path) {
           expect(step.gx).toBeGreaterThanOrEqual(room.interior.gx1);
           expect(step.gx).toBeLessThanOrEqual(room.interior.gx2);
@@ -77,7 +84,9 @@ describe("officeRooms reachability", () => {
   it("reaches the meeting seats and the arrival queue from a desk", () => {
     const seat = getDeskPosition(1);
     for (const meetingSeat of MEETING_TABLE.seats) {
-      expect(findPath(seat, meetingSeat, undefined, grid).length).toBeGreaterThan(0);
+      expect(
+        findPath(seat, meetingSeat, undefined, grid).length,
+      ).toBeGreaterThan(0);
     }
     expect(
       findPath(seat, ARRIVAL_QUEUE_POSITIONS[0], undefined, grid).length,

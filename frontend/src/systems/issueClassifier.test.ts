@@ -23,9 +23,14 @@ const actor = { agentId: "subagent_1", agentName: "Editor" };
 
 describe("classifyIssue", () => {
   it("ignores successful tool calls", () => {
-    expect(classifyIssue(event("post_tool_use", { toolName: "Bash" }), actor)).toBeNull();
     expect(
-      classifyIssue(event("post_tool_use", { toolName: "Bash", success: true }), actor),
+      classifyIssue(event("post_tool_use", { toolName: "Bash" }), actor),
+    ).toBeNull();
+    expect(
+      classifyIssue(
+        event("post_tool_use", { toolName: "Bash", success: true }),
+        actor,
+      ),
     ).toBeNull();
   });
 
@@ -71,7 +76,10 @@ describe("classifyIssue", () => {
       event("error", { errorType: "stop_failure", message: "429" }),
       actor,
     );
-    expect(stopped).toMatchObject({ kind: "stop_failure", severity: "critical" });
+    expect(stopped).toMatchObject({
+      kind: "stop_failure",
+      severity: "critical",
+    });
   });
 
   it("uses the tool input as the description of a permission request", () => {
@@ -91,7 +99,10 @@ describe("classifyIssue", () => {
 
   it("only turns actionable notifications into issues", () => {
     expect(
-      classifyIssue(event("notification", { notificationType: "idle_prompt" }), actor),
+      classifyIssue(
+        event("notification", { notificationType: "idle_prompt" }),
+        actor,
+      ),
     ).toBeNull();
     expect(
       classifyIssue(
@@ -110,13 +121,17 @@ describe("classifyIssue", () => {
   it("flags failed background tasks only", () => {
     expect(
       classifyIssue(
-        event("background_task_notification", { backgroundTaskStatus: "completed" }),
+        event("background_task_notification", {
+          backgroundTaskStatus: "completed",
+        }),
         actor,
       ),
     ).toBeNull();
     expect(
       classifyIssue(
-        event("background_task_notification", { backgroundTaskStatus: "failed" }),
+        event("background_task_notification", {
+          backgroundTaskStatus: "failed",
+        }),
         actor,
       )?.kind,
     ).toBe("background_failed");
