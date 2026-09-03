@@ -32,6 +32,7 @@ import {
 import { useIssuesStore } from "@/stores/issuesStore";
 import { useRoomActivityStore } from "@/stores/roomActivityStore";
 import { extractSchedule, useScheduleStore } from "@/stores/scheduleStore";
+import { ARTIFACT_TOOLS, useArtifactStore } from "@/stores/artifactStore";
 import { getRoomForDesk } from "@/systems/officeRooms";
 import type { EventType, WebSocketMessage } from "@/types";
 
@@ -153,6 +154,7 @@ export function useWebSocketEvents({
                 useIssuesStore.getState().reset();
                 useRoomActivityStore.getState().reset();
                 useScheduleStore.getState().reset();
+                useArtifactStore.getState().reset();
               }
 
               // Issues panel — record problems, clear "waiting on you" ones
@@ -204,6 +206,22 @@ export function useWebSocketEvents({
                       useScheduleStore.getState().setSchedule(schedule);
                     }
                   }
+                  // Artifacts board: track Write/Edit file paths per room.
+                  const filePath = message.event.detail?.toolInput?.file_path;
+                  if (
+                    message.event.detail?.toolName &&
+                    ARTIFACT_TOOLS.has(message.event.detail.toolName) &&
+                    typeof filePath === "string" &&
+                    activityRoom
+                  ) {
+                    useArtifactStore.getState().add({
+                      roomId: activityRoom.id,
+                      path: filePath,
+                      tool: message.event.detail.toolName,
+                      agentName: activityAgent?.name ?? issueActor.agentName,
+                    });
+                  }
+
                   if (agentId && agentId !== "main") {
                     agentMachineService.notifyActivity(agentId);
                   }
@@ -341,4 +359,5 @@ export function resetFrontendState(): void {
   useIssuesStore.getState().reset();
   useRoomActivityStore.getState().reset();
   useScheduleStore.getState().reset();
+  useArtifactStore.getState().reset();
 }

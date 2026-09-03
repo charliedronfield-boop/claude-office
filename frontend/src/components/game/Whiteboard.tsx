@@ -19,6 +19,7 @@
  * 10: Heat Map (file edit frequency) - click to reach from mode 9
  * 11: Kanban Board (task tracking with TODO/IN PROGRESS/DONE columns)
  * 12: Pipeline Board (rooms as production stages, who's where) - hotkey P
+ * 13: Artifacts (recent Write/Edit file paths, newest first) - hotkey A
  */
 
 import { Graphics } from "pixi.js";
@@ -38,7 +39,9 @@ import { CoffeeMode } from "./whiteboard/CoffeeMode";
 import { HeatMapMode } from "./whiteboard/HeatMapMode";
 import { KanbanMode } from "./whiteboard/KanbanMode";
 import { PipelineMode } from "./whiteboard/PipelineMode";
+import { ArtifactsMode } from "./whiteboard/ArtifactsMode";
 import { MODE_INFO, WHITEBOARD_MODE_COUNT } from "./whiteboard/WhiteboardModeRegistry";
+import { useArtifactStore } from "@/stores/artifactStore";
 
 // ============================================================================
 // WHITEBOARD FRAME
@@ -149,6 +152,7 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
   const setMode = useGameStore((s) => s.setWhiteboardMode);
   const agentsMap = useGameStore((s) => s.agents);
   const bossTask = useGameStore((s) => s.boss.currentTask);
+  const artifacts = useArtifactStore((s) => s.artifacts);
 
   // Keyboard hotkeys: T = Todo List (0), B = Background Tasks (1), 0-9 = modes
   useEffect(() => {
@@ -182,6 +186,9 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
           break;
         case "p":
           setMode(12);
+          break;
+        case "a":
+          setMode(13);
           break;
       }
     };
@@ -239,6 +246,8 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
         return <KanbanMode data={whiteboardData} />;
       case 12:
         return <PipelineMode agents={agentList} />;
+      case 13:
+        return <ArtifactsMode artifacts={artifacts} />;
       default:
         return <TodoListMode todos={todos} />;
     }
