@@ -90,7 +90,8 @@ export type WhiteboardMode =
   | 8 // News Ticker
   | 9 // Coffee
   | 10 // Heat Map
-  | 11; // Kanban Board — hotkey K
+  | 11 // Kanban Board — hotkey K
+  | 12; // Pipeline Board (rooms as production stages) — hotkey P
 
 /**
  * Shape of the optional event detail payload carried in WebSocket events.

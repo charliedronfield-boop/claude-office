@@ -1,7 +1,7 @@
 /**
  * Whiteboard sub-components barrel export.
  *
- * Exports all 12 display mode components and the mode registry so that
+ * Exports all 13 display mode components and the mode registry so that
  * Whiteboard.tsx can import everything from a single path.
  */
 
@@ -39,6 +39,9 @@ export { HeatMapMode } from "./HeatMapMode";
 export type { HeatMapModeProps } from "./HeatMapMode";
 
 export { KanbanMode } from "./KanbanMode";
+
+export { PipelineMode } from "./PipelineMode";
+export type { PipelineModeProps } from "./PipelineMode";
 
 export {
   MODE_INFO,
