@@ -7,7 +7,7 @@
  * navigation-grid obstacles.
  */
 
-import { type ReactNode, useCallback, useMemo } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Graphics, TextStyle } from "pixi.js";
 import {
   DOOR_TILE_RECTS,
@@ -19,6 +19,7 @@ import {
   tileRectToPixels,
 } from "@/systems/officeRooms";
 import { useRoomActivityStore } from "@/stores/roomActivityStore";
+import { formatCountdown, useScheduleStore } from "@/stores/scheduleStore";
 
 const WALL_COLOR = 0x3d3d3d;
 const WALL_TRIM_COLOR = 0x4a4a4a;
@@ -131,9 +132,32 @@ function drawActivityBadge(g: Graphics): void {
   g.fill({ color: 0x000000, alpha: 0.55 });
 }
 
+function drawScheduleBadge(g: Graphics, width: number): void {
+  g.clear();
+  g.roundRect(-width / 2, 0, width, ACTIVITY_BADGE_HEIGHT, 3);
+  g.fill({ color: 0x000000, alpha: 0.55 });
+}
+
 export function RoomWalls(): ReactNode {
   const drawRoomsCallback = useCallback((g: Graphics) => drawRooms(g), []);
   const toolCalls = useRoomActivityStore((s) => s.toolCalls);
+  const schedule = useScheduleStore((s) => s.raw);
+  const scheduleAt = useScheduleStore((s) => s.parsedAt);
+
+  // Only ticks while a parseable schedule exists, so idle sessions don't
+  // pay for a 30s re-render loop.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (scheduleAt === null) return;
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, [scheduleAt]);
+
+  const scheduleLabel = useMemo(() => {
+    if (!schedule) return null;
+    if (scheduleAt === null) return schedule;
+    return formatCountdown(scheduleAt, now) ?? "any moment now";
+  }, [schedule, scheduleAt, now]);
 
   const labelStyle = useMemo<Partial<TextStyle>>(
     () => ({
@@ -191,6 +215,28 @@ export function RoomWalls(): ReactNode {
                 >
                   <pixiText
                     text={`⚙ ${count}`}
+                    anchor={0.5}
+                    style={activityStyle}
+                    resolution={2}
+                  />
+                </pixiContainer>
+              </pixiContainer>
+            )}
+
+            {/* Next-upload badge: the most recent --schedule flag seen on a
+                publisher Bash call (see scheduleStore). Publishing only,
+                stacked below the activity row so the two never overlap. */}
+            {room.id === "publishing" && scheduleLabel && (
+              <pixiContainer
+                x={0}
+                y={PLACARD_HEIGHT + 4 + (count > 0 ? ACTIVITY_BADGE_HEIGHT + 3 : 0)}
+              >
+                <pixiGraphics
+                  draw={(g) => drawScheduleBadge(g, PLACARD_WIDTH)}
+                />
+                <pixiContainer x={0} y={ACTIVITY_BADGE_HEIGHT / 2} scale={0.5}>
+                  <pixiText
+                    text={`📅 ${scheduleLabel}`}
                     anchor={0.5}
                     style={activityStyle}
                     resolution={2}

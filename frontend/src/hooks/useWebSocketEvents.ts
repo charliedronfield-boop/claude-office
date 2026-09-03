@@ -31,6 +31,7 @@ import {
 } from "@/systems/issueClassifier";
 import { useIssuesStore } from "@/stores/issuesStore";
 import { useRoomActivityStore } from "@/stores/roomActivityStore";
+import { extractSchedule, useScheduleStore } from "@/stores/scheduleStore";
 import { getRoomForDesk } from "@/systems/officeRooms";
 import type { EventType, WebSocketMessage } from "@/types";
 
@@ -151,6 +152,7 @@ export function useWebSocketEvents({
                 resetSpawnIndex();
                 useIssuesStore.getState().reset();
                 useRoomActivityStore.getState().reset();
+                useScheduleStore.getState().reset();
               }
 
               // Issues panel — record problems, clear "waiting on you" ones
@@ -188,6 +190,19 @@ export function useWebSocketEvents({
                   );
                   if (activityRoom) {
                     useRoomActivityStore.getState().increment(activityRoom.id);
+                  }
+
+                  // "Next upload" placard: watch for a --schedule flag on
+                  // any Bash call (the publisher's upload command).
+                  const command = message.event.detail?.toolInput?.command;
+                  if (
+                    message.event.detail?.toolName === "Bash" &&
+                    typeof command === "string"
+                  ) {
+                    const schedule = extractSchedule(command);
+                    if (schedule) {
+                      useScheduleStore.getState().setSchedule(schedule);
+                    }
                   }
                   if (agentId && agentId !== "main") {
                     agentMachineService.notifyActivity(agentId);
@@ -325,4 +340,5 @@ export function resetFrontendState(): void {
 
   useIssuesStore.getState().reset();
   useRoomActivityStore.getState().reset();
+  useScheduleStore.getState().reset();
 }
