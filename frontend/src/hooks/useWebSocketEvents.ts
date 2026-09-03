@@ -30,6 +30,8 @@ import {
   type IssueActor,
 } from "@/systems/issueClassifier";
 import { useIssuesStore } from "@/stores/issuesStore";
+import { useRoomActivityStore } from "@/stores/roomActivityStore";
+import { getRoomForDesk } from "@/systems/officeRooms";
 import type { EventType, WebSocketMessage } from "@/types";
 
 /**
@@ -148,6 +150,7 @@ export function useWebSocketEvents({
                 lastSeenBubbleTextRef.current.clear();
                 resetSpawnIndex();
                 useIssuesStore.getState().reset();
+                useRoomActivityStore.getState().reset();
               }
 
               // Issues panel — record problems, clear "waiting on you" ones
@@ -175,6 +178,17 @@ export function useWebSocketEvents({
                 const typingKey = agentId || "boss";
                 if (message.event.type === "pre_tool_use") {
                   typingTrackerRef.current?.onPreToolUse(typingKey);
+                  // Per-room activity tally (RoomWalls placard subtitle) —
+                  // count once per call, on pre_tool_use only.
+                  const activityAgent = useGameStore
+                    .getState()
+                    .agents.get(issueActor.agentId ?? "");
+                  const activityRoom = getRoomForDesk(
+                    activityAgent?.desk ?? null,
+                  );
+                  if (activityRoom) {
+                    useRoomActivityStore.getState().increment(activityRoom.id);
+                  }
                   if (agentId && agentId !== "main") {
                     agentMachineService.notifyActivity(agentId);
                   }
@@ -310,4 +324,5 @@ export function resetFrontendState(): void {
   resetSpawnIndex();
 
   useIssuesStore.getState().reset();
+  useRoomActivityStore.getState().reset();
 }

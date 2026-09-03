@@ -18,6 +18,7 @@ import {
   WALL_TILE_RECTS,
   tileRectToPixels,
 } from "@/systems/officeRooms";
+import { useRoomActivityStore } from "@/stores/roomActivityStore";
 
 const WALL_COLOR = 0x3d3d3d;
 const WALL_TRIM_COLOR = 0x4a4a4a;
@@ -121,8 +122,18 @@ function drawPlacard(g: Graphics, accent: number): void {
   g.stroke({ width: 2, color: accent });
 }
 
+const ACTIVITY_BADGE_WIDTH = 46;
+const ACTIVITY_BADGE_HEIGHT = 14;
+
+function drawActivityBadge(g: Graphics): void {
+  g.clear();
+  g.roundRect(0, 0, ACTIVITY_BADGE_WIDTH, ACTIVITY_BADGE_HEIGHT, 3);
+  g.fill({ color: 0x000000, alpha: 0.55 });
+}
+
 export function RoomWalls(): ReactNode {
   const drawRoomsCallback = useCallback((g: Graphics) => drawRooms(g), []);
+  const toolCalls = useRoomActivityStore((s) => s.toolCalls);
 
   const labelStyle = useMemo<Partial<TextStyle>>(
     () => ({
@@ -135,6 +146,15 @@ export function RoomWalls(): ReactNode {
     [],
   );
 
+  const activityStyle = useMemo<Partial<TextStyle>>(
+    () => ({
+      fontFamily: '"Courier New", Courier, monospace',
+      fontSize: 18,
+      fill: "#93c5fd",
+    }),
+    [],
+  );
+
   const placardY = ROOM_TOP_GY * TILE_PX + 4;
 
   return (
@@ -143,6 +163,7 @@ export function RoomWalls(): ReactNode {
       {ROOMS.map((room) => {
         const floor = tileRectToPixels(room.interior);
         const centerX = floor.x + floor.width / 2;
+        const count = toolCalls[room.id] ?? 0;
         return (
           <pixiContainer key={room.id} x={centerX} y={placardY}>
             <pixiGraphics draw={(g) => drawPlacard(g, room.accent)} />
@@ -154,6 +175,29 @@ export function RoomWalls(): ReactNode {
                 resolution={2}
               />
             </pixiContainer>
+
+            {/* Activity badge: cumulative tool calls this session — a rough
+                "how much work has happened here" proxy (see roomActivityStore). */}
+            {count > 0 && (
+              <pixiContainer
+                x={PLACARD_WIDTH / 2 - 6}
+                y={PLACARD_HEIGHT + 4}
+              >
+                <pixiGraphics draw={drawActivityBadge} />
+                <pixiContainer
+                  x={ACTIVITY_BADGE_WIDTH / 2}
+                  y={ACTIVITY_BADGE_HEIGHT / 2}
+                  scale={0.5}
+                >
+                  <pixiText
+                    text={`⚙ ${count}`}
+                    anchor={0.5}
+                    style={activityStyle}
+                    resolution={2}
+                  />
+                </pixiContainer>
+              </pixiContainer>
+            )}
           </pixiContainer>
         );
       })}
