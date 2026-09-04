@@ -317,6 +317,21 @@ const en = {
   "tour.steps.settings.title": "Configure Floors",
   "tour.steps.settings.description":
     "Open Settings to add floors and map project folders for a multi-floor building view.",
+  "tour.steps.roomsChats.title": "Role rooms & chats",
+  "tour.steps.roomsChats.description":
+    "Agents are routed into walled role rooms — Scripting, Editing, Thumbnails & SEO, Publishing — by their task. When they message each other or the boss, they walk to a chat spot or the meeting table, and every real chat is saved to that room's knowledge notes board.",
+  "tour.steps.issuesTab.title": "Fix problems here",
+  "tour.steps.issuesTab.description":
+    "Tool failures, permission denials, and anything waiting on you land in the Issues tab — tap a card to see what happened and jump straight to the terminal.",
+  "tour.steps.whiteboard.title": "The whiteboard",
+  "tour.steps.whiteboard.description":
+    "Click the whiteboard on the wall (or use its hotkeys) to cycle through views — a kanban board, the production pipeline, recent file edits, and a per-room pass/fail Room Stats board.",
+  "tour.steps.replay.title": "Replay a session",
+  "tour.steps.replay.description":
+    "Once a session has run, the Replay button in the corner steps back through everything that happened, at your choice of speed.",
+  "tour.steps.commandCenter.title": "Command Center",
+  "tour.steps.commandCenter.description":
+    "Every terminal session, at a glance — bucketed by whether it needs you, is working, or just finished. Click it to open.",
   "tour.skip": "Skip tour",
   "tour.next": "Next",
 

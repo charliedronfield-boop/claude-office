@@ -319,6 +319,21 @@ const es: Record<TranslationKey, string> = {
   "tour.steps.settings.title": "Configurar Pisos",
   "tour.steps.settings.description":
     "Abre Configuración para agregar pisos y mapear carpetas de proyectos para una vista de edificio multi-piso.",
+  "tour.steps.roomsChats.title": "Salas de roles y chats",
+  "tour.steps.roomsChats.description":
+    "Los agentes se dirigen a salas de roles con paredes — Guion, Edición, Miniaturas y SEO, Publicación — según su tarea. Cuando se envían mensajes entre ellos o con el jefe, caminan hasta un punto de chat o la mesa de reuniones, y cada chat real se guarda en el tablero de notas de esa sala.",
+  "tour.steps.issuesTab.title": "Soluciona problemas aquí",
+  "tour.steps.issuesTab.description":
+    "Los fallos de herramientas, denegaciones de permisos y todo lo que espera tu atención aparece en la pestaña Problemas — toca una tarjeta para ver qué pasó y saltar directo a la terminal.",
+  "tour.steps.whiteboard.title": "La pizarra",
+  "tour.steps.whiteboard.description":
+    "Haz clic en la pizarra de la pared (o usa sus atajos) para recorrer las vistas — un tablero kanban, el pipeline de producción, ediciones de archivos recientes y un tablero de aciertos/fallos por sala.",
+  "tour.steps.replay.title": "Reproducir una sesión",
+  "tour.steps.replay.description":
+    "Una vez que una sesión ha terminado, el botón Reproducir en la esquina recorre todo lo que sucedió, a la velocidad que elijas.",
+  "tour.steps.commandCenter.title": "Centro de Comando",
+  "tour.steps.commandCenter.description":
+    "Todas las sesiones de terminal, de un vistazo — agrupadas según si necesitan tu atención, están trabajando o acaban de terminar. Haz clic para abrirlo.",
   "tour.skip": "Saltar tour",
   "tour.next": "Siguiente",
 

@@ -127,6 +127,7 @@ export function ReplayControls(): ReactNode {
         onClick={() => void startReplay()}
         disabled={!sessionId || sessionId === "None" || loading}
         title={t("replay.start")}
+        data-tour-id="replay-btn"
         className="fixed bottom-6 right-6 z-40 flex items-center gap-1.5 px-3 py-2 bg-slate-800/90 hover:bg-slate-700 disabled:opacity-40 border border-slate-600 rounded-lg text-slate-200 text-xs font-mono shadow-lg backdrop-blur-sm"
       >
         <History size={13} />

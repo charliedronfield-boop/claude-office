@@ -319,6 +319,21 @@ const ptBR: Record<TranslationKey, string> = {
   "tour.steps.settings.title": "Configurar Andares",
   "tour.steps.settings.description":
     "Abra Configurações para adicionar andares e mapear pastas de projetos para uma visão de edifício multi-andar.",
+  "tour.steps.roomsChats.title": "Salas de função e conversas",
+  "tour.steps.roomsChats.description":
+    "Os agentes são direcionados para salas de função com paredes — Roteiro, Edição, Miniaturas e SEO, Publicação — de acordo com sua tarefa. Quando trocam mensagens entre si ou com o chefe, eles caminham até um ponto de conversa ou a mesa de reunião, e cada conversa real fica salva no quadro de notas daquela sala.",
+  "tour.steps.issuesTab.title": "Resolva problemas aqui",
+  "tour.steps.issuesTab.description":
+    "Falhas de ferramentas, permissões negadas e qualquer coisa esperando por você aparecem na aba Problemas — toque em um cartão para ver o que aconteceu e ir direto ao terminal.",
+  "tour.steps.whiteboard.title": "O quadro branco",
+  "tour.steps.whiteboard.description":
+    "Clique no quadro branco na parede (ou use seus atalhos) para percorrer as visualizações — um quadro kanban, o pipeline de produção, edições de arquivos recentes e um quadro de acertos/falhas por sala.",
+  "tour.steps.replay.title": "Reproduzir uma sessão",
+  "tour.steps.replay.description":
+    "Depois que uma sessão termina, o botão Replay no canto percorre tudo o que aconteceu, na velocidade que você escolher.",
+  "tour.steps.commandCenter.title": "Central de Comando",
+  "tour.steps.commandCenter.description":
+    "Todas as sessões de terminal, em um relance — agrupadas conforme precisam de você, estão trabalhando ou acabaram de terminar. Clique para abrir.",
   "tour.skip": "Pular tour",
   "tour.next": "Próximo",
 
