@@ -123,6 +123,22 @@ class Settings(BaseSettings):
     # reopen it.
     CLAUDE_OFFICE_ALLOW_LAN_VIEW: bool = False
 
+    # Optional webhook (e.g. a Slack incoming-webhook or ntfy.sh URL) POSTed
+    # a small JSON summary whenever a critical issue appears: a tool
+    # permission is denied by auto mode, a turn ends in an API/turn error, or
+    # a subagent asks the boss for a permission decision. Off (empty) by
+    # default. Best-effort — a failed or slow webhook never affects event
+    # processing (see event_processor._notify_critical_issue).
+    CRITICAL_ISSUE_WEBHOOK_URL: str = ""
+
+    # Optional webhook POSTed a short plain-language summary when a session
+    # ends: tool calls made/failed, agents spawned, chats exchanged. Separate
+    # from CRITICAL_ISSUE_WEBHOOK_URL so routine end-of-shift digests don't
+    # have to share a channel with urgent alerts. Off (empty) by default;
+    # same fire-and-forget/best-effort semantics (see
+    # event_processor._notify_session_digest).
+    SESSION_DIGEST_WEBHOOK_URL: str = ""
+
     @property
     def effective_api_key(self) -> str:
         """Return the configured API key, or the per-launch auto-generated token."""

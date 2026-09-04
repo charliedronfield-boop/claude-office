@@ -90,7 +90,10 @@ export type WhiteboardMode =
   | 8 // News Ticker
   | 9 // Coffee
   | 10 // Heat Map
-  | 11; // Kanban Board — hotkey K
+  | 11 // Kanban Board — hotkey K
+  | 12 // Pipeline Board (rooms as production stages) — hotkey P
+  | 13 // Artifacts (recent Write/Edit file paths) — hotkey A
+  | 14; // Room Stats (pass/fail per room) — hotkey S
 
 /**
  * Shape of the optional event detail payload carried in WebSocket events.
@@ -106,6 +109,12 @@ export interface EventDetail {
   taskDescription?: string;
   agentName?: string;
   prompt?: string;
+  success?: boolean;
+  reason?: string;
+  notificationType?: string;
+  nativeAgentId?: string;
+  backgroundTaskStatus?: string;
+  toolUseId?: string;
 }
 
 /**

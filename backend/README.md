@@ -164,6 +164,9 @@ Configuration is managed via environment variables or a `.env` file in the backe
 | `CLAUDE_OFFICE_API_KEY` | (empty — auto-generated per launch) | Explicit API key; gates all state-changing endpoints when set (see [Authentication](#authentication)) |
 | `SERVE_STATIC` | (unset) | Set to `1`/`true`/`yes` to serve the built frontend from `backend/static/` |
 | `BACKEND_CORS_ORIGINS` | localhost origins | Allowed CORS origins (localhost only by default) |
+| `CLAUDE_OFFICE_ALLOW_LAN_VIEW` | `False` | Set to `true` to allow read-only viewing from other devices on your local network |
+| `CRITICAL_ISSUE_WEBHOOK_URL` | (empty) | POSTs `{"text": "...", "sessionId": "..."}` to this URL (e.g. a Slack incoming webhook or [ntfy.sh](https://ntfy.sh) topic) whenever a permission is denied by auto mode, a turn ends in an API/turn error, or a subagent needs a permission decision. Best-effort — a slow/failed webhook never affects event processing. |
+| `SESSION_DIGEST_WEBHOOK_URL` | (empty) | Same `{"text": "...", "sessionId": "..."}` shape, POSTed once when a session ends: a deterministic tally of tool calls made/failed, agents spawned, and chats exchanged. Separate from `CRITICAL_ISSUE_WEBHOOK_URL` so routine end-of-shift digests don't share a channel with urgent alerts. |
 
 ### Docker Path Translation
 
@@ -181,7 +184,7 @@ Keys are compared in constant time (`hmac.compare_digest`).
 
 | Mode | How the key is set | What requires the key |
 |------|--------------------|-----------------------|
-| Auto-generated (default) | A random token is generated on every launch | State-changing operations: `DELETE /api/v1/sessions`, `POST /api/v1/sessions/simulate`, and `POST /api/v1/sessions/{id}/focus` (terminal activation + clipboard write) |
+| Auto-generated (default) | A random token is generated on every launch | State-changing operations: `DELETE /api/v1/sessions`, `POST /api/v1/sessions/simulate`, `POST /api/v1/sessions/{id}/focus` (terminal activation + clipboard write), and `POST /api/v1/permissions/{id}/decide` (approving/denying a tool call) |
 | Explicit | `CLAUDE_OFFICE_API_KEY` env var or `backend/.env` | All endpoints except `/health`, `/docs`, `/redoc`, the OpenAPI schema, and CORS preflight |
 
 Example:

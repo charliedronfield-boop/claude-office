@@ -24,7 +24,42 @@ import { TypingTracker } from "@/systems/typingTracker";
 import { reconcileState } from "@/systems/stateReconciler";
 import { shouldShowToast } from "@/systems/toastFilter";
 import { WebSocketController } from "@/systems/webSocketController";
+import {
+  classifyIssue,
+  clearsWaitingIssues,
+  type IssueActor,
+} from "@/systems/issueClassifier";
+import { useIssuesStore } from "@/stores/issuesStore";
+import { useRoomActivityStore } from "@/stores/roomActivityStore";
+import { useRoomStatsStore } from "@/stores/roomStatsStore";
+import { extractSchedule, useScheduleStore } from "@/stores/scheduleStore";
+import { ARTIFACT_TOOLS, useArtifactStore } from "@/stores/artifactStore";
+import { getRoomForDesk } from "@/systems/officeRooms";
+import { playCriticalIssueChime } from "@/systems/audioCues";
 import type { EventType, WebSocketMessage } from "@/types";
+
+/**
+ * Work out which character an event belongs to. Hooks attribute tool events
+ * to "main" but carry the native subagent id when they fired inside one.
+ */
+function resolveIssueActor(
+  event: NonNullable<WebSocketMessage["event"]>,
+): IssueActor {
+  const agents = useGameStore.getState().agents;
+  const nativeId = event.detail?.nativeAgentId;
+  if (nativeId) {
+    for (const agent of agents.values()) {
+      if (agent.nativeId === nativeId) {
+        return { agentId: agent.id, agentName: agent.name };
+      }
+    }
+  }
+  const agentId = event.agentId || "main";
+  return {
+    agentId,
+    agentName: agents.get(agentId)?.name ?? event.detail?.agentName ?? null,
+  };
+}
 
 // ============================================================================
 // TYPES
@@ -118,6 +153,35 @@ export function useWebSocketEvents({
                 processedAgentsRef.current.clear();
                 lastSeenBubbleTextRef.current.clear();
                 resetSpawnIndex();
+                useIssuesStore.getState().reset();
+                useRoomActivityStore.getState().reset();
+                useRoomStatsStore.getState().reset();
+                useScheduleStore.getState().reset();
+                useArtifactStore.getState().reset();
+              }
+
+              // Issues panel — record problems, clear "waiting on you" ones
+              // once the agent (or the whole session) moves on.
+              const issueActor = resolveIssueActor(message.event);
+              const issue = classifyIssue(message.event, issueActor);
+              if (issue) {
+                const prevCriticalAt = useIssuesStore.getState().lastCriticalAt;
+                useIssuesStore.getState().addIssue(issue);
+                // Only chime for a genuinely new critical issue — addIssue
+                // silently drops duplicates (lastCriticalAt stays unchanged).
+                if (
+                  useIssuesStore.getState().lastCriticalAt !== prevCriticalAt &&
+                  usePreferencesStore.getState().criticalIssueAudioEnabled
+                ) {
+                  playCriticalIssueChime();
+                }
+              } else if (clearsWaitingIssues(message.event.type)) {
+                const sessionWide =
+                  message.event.type === "stop" ||
+                  message.event.type === "session_end";
+                useIssuesStore
+                  .getState()
+                  .resolveWaitingFor(sessionWide ? null : issueActor.agentId);
               }
 
               // Toggle typing animation on tool-use events (min-duration enforced
@@ -128,10 +192,63 @@ export function useWebSocketEvents({
               ) {
                 const agentId = message.event.agentId;
                 const typingKey = agentId || "boss";
+                const activityAgent = useGameStore
+                  .getState()
+                  .agents.get(issueActor.agentId ?? "");
+                const activityRoom = getRoomForDesk(
+                  activityAgent?.desk ?? null,
+                );
                 if (message.event.type === "pre_tool_use") {
                   typingTrackerRef.current?.onPreToolUse(typingKey);
+                  // Per-room activity tally (RoomWalls placard subtitle) —
+                  // count once per call, on pre_tool_use only.
+                  if (activityRoom) {
+                    useRoomActivityStore.getState().increment(activityRoom.id);
+                  }
+
+                  // "Next upload" placard: watch for a --schedule flag on
+                  // any Bash call (the publisher's upload command).
+                  const command = message.event.detail?.toolInput?.command;
+                  if (
+                    message.event.detail?.toolName === "Bash" &&
+                    typeof command === "string"
+                  ) {
+                    const schedule = extractSchedule(command);
+                    if (schedule) {
+                      useScheduleStore.getState().setSchedule(schedule);
+                    }
+                  }
+                  // Artifacts board: track Write/Edit file paths per room.
+                  const filePath = message.event.detail?.toolInput?.file_path;
+                  if (
+                    message.event.detail?.toolName &&
+                    ARTIFACT_TOOLS.has(message.event.detail.toolName) &&
+                    typeof filePath === "string" &&
+                    activityRoom
+                  ) {
+                    useArtifactStore.getState().add({
+                      roomId: activityRoom.id,
+                      path: filePath,
+                      tool: message.event.detail.toolName,
+                      agentName: activityAgent?.name ?? issueActor.agentName,
+                    });
+                  }
+
+                  if (agentId && agentId !== "main") {
+                    agentMachineService.notifyActivity(agentId);
+                  }
                 } else {
                   typingTrackerRef.current?.onPostToolUse(typingKey);
+                  // Per-room pass/fail tally (Room Stats whiteboard mode) —
+                  // count once per call, on post_tool_use (once success is known).
+                  if (activityRoom) {
+                    useRoomStatsStore
+                      .getState()
+                      .recordResult(
+                        activityRoom.id,
+                        message.event.detail?.success !== false,
+                      );
+                  }
                 }
               }
 
@@ -260,4 +377,10 @@ export function resetFrontendState(): void {
 
   // Reset spawn positions.
   resetSpawnIndex();
+
+  useIssuesStore.getState().reset();
+  useRoomActivityStore.getState().reset();
+  useRoomStatsStore.getState().reset();
+  useScheduleStore.getState().reset();
+  useArtifactStore.getState().reset();
 }

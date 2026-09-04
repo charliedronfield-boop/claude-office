@@ -37,6 +37,7 @@ export default function CommandBar(): ReactNode {
   const setCommandFilter = useAttentionStore((s) => s.setCommandFilter);
   const clearAllToasts = useAttentionStore((s) => s.clearAllToasts);
   const openFocusPopup = useAttentionStore((s) => s.openFocusPopup);
+  const openSearchModal = useAttentionStore((s) => s.openSearchModal);
 
   const agents = useGameStore((s) => s.agents);
   const setDebugMode = useGameStore((s) => s.setDebugMode);
@@ -79,6 +80,16 @@ export default function CommandBar(): ReactNode {
     });
 
     // Utility commands
+    cmds.push({
+      id: "search-history",
+      label: t("attention.commandBar.searchHistory"),
+      icon: "🔍",
+      action: () => {
+        openSearchModal();
+        closeCommandBar();
+      },
+    });
+
     cmds.push({
       id: "dismiss-all",
       label: t("attention.commandBar.dismissAll"),
@@ -146,6 +157,7 @@ export default function CommandBar(): ReactNode {
     closeCommandBar,
     clearAllToasts,
     openFocusPopup,
+    openSearchModal,
     setDebugMode,
     toggleDebugOverlay,
   ]);

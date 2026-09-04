@@ -10,6 +10,7 @@
 import { useGameStore, selectAgents } from "@/stores/gameStore";
 import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "@/hooks/useTranslation";
+import { getRoomForDesk } from "@/systems/officeRooms";
 import {
   Users,
   Briefcase,
@@ -38,6 +39,8 @@ function getBackendStateColor(state: string) {
       return "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
     case "thinking":
       return "bg-purple-500/20 text-purple-400 border-purple-500/40";
+    case "chatting":
+      return "bg-pink-500/20 text-pink-400 border-pink-500/40";
     case "arriving":
     case "in_elevator":
       return "bg-slate-500/20 text-slate-400 border-slate-500/40";
@@ -51,6 +54,12 @@ function getPhaseColor(phase: string) {
   switch (phase) {
     case "idle":
       return "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
+    case "wandering":
+    case "returning_to_desk":
+      return "bg-teal-500/20 text-teal-400 border-teal-500/40";
+    case "walking_to_chat":
+    case "chatting":
+      return "bg-pink-500/20 text-pink-400 border-pink-500/40";
     case "arriving":
     case "in_arrival_queue":
     case "walking_to_ready":
@@ -136,7 +145,8 @@ export function AgentStatus() {
                 {agent.desk && (
                   <span className="text-slate-500 text-[10px] flex items-center gap-1 flex-shrink-0">
                     <MapPin size={10} />
-                    {t("agentStatus.desk")} {agent.desk}
+                    {getRoomForDesk(agent.desk)?.name ??
+                      `${t("agentStatus.desk")} ${agent.desk}`}
                   </span>
                 )}
               </div>

@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from app.models.events import (
     AgentEvent,
     AgentEventData,
+    AgentMessageEvent,
     BackgroundTaskEvent,
     BackgroundTaskEventData,
     Event,
@@ -55,6 +56,7 @@ _EVENT_TYPE_TO_VARIANT = {
     EventType.TASK_CREATED: TaskEvent,
     EventType.TASK_COMPLETED: TaskEvent,
     EventType.TEAMMATE_IDLE: LifecycleEvent,
+    EventType.AGENT_MESSAGE: AgentMessageEvent,
 }
 
 

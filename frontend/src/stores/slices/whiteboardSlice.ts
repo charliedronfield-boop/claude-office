@@ -7,8 +7,7 @@
 import type { StateCreator } from "zustand";
 import type { GameStore } from "../gameStore";
 import type { WhiteboardData, WhiteboardMode } from "@/types";
-
-const WHITEBOARD_MODE_COUNT = 12; // 0-11 modes
+import { getNextMode } from "@/components/game/whiteboard/WhiteboardModeRegistry";
 
 // Initial whiteboard data
 const initialWhiteboardData: WhiteboardData = {
@@ -55,7 +54,6 @@ export const createWhiteboardSlice: StateCreator<
 
   cycleWhiteboardMode: () =>
     set((state) => ({
-      whiteboardMode: ((state.whiteboardMode + 1) %
-        WHITEBOARD_MODE_COUNT) as WhiteboardMode,
+      whiteboardMode: getNextMode(state.whiteboardMode),
     })),
 });

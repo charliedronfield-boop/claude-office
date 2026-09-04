@@ -53,6 +53,7 @@ EXCLUDED: dict[str, str] = {
     "LifecycleEvent": _FAMILY_EVENT_REASON,
     "TaskEvent": _FAMILY_EVENT_REASON,
     "BackgroundTaskEvent": _FAMILY_EVENT_REASON,
+    "AgentMessageEvent": _FAMILY_EVENT_REASON,
     # Already emitted transitively: KanbanTask is a ``list[KanbanTask]`` field
     # of ``WhiteboardData`` (which IS in MODELS), so ``models_json_schema``
     # includes it as a ``$defs`` reference and ``json2ts`` emits it as an

@@ -38,6 +38,8 @@ export type AgentSlice = {
       backendState: BackendAgentState;
       name: string | null;
       currentTask: string | null;
+      nativeId?: string | null;
+      activeChat?: BackendAgent["activeChat"];
     },
   ) => void;
   updateAgentQueueInfo: (
@@ -46,6 +48,7 @@ export type AgentSlice = {
     queueIndex: number,
   ) => void;
   setAgentTyping: (agentId: string, typing: boolean) => void;
+  touchAgentActivity: (agentId: string) => void;
   applyAgentMovements: (movements: AgentMovement[]) => void;
 };
 
@@ -83,10 +86,13 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
         const newAgents = new Map(state.agents);
         const animState: AgentAnimationState = {
           id: backendAgent.id,
+          nativeId: backendAgent.nativeId ?? null,
           name: backendAgent.name ?? null,
           color: backendAgent.color,
           number: backendAgent.number,
           desk: backendAgent.desk ?? null,
+          roomId: backendAgent.roomId ?? null,
+          activeChat: backendAgent.activeChat ?? null,
           backendState: backendAgent.state,
           currentTask: backendAgent.currentTask ?? null,
           characterType: backendAgent.characterType ?? null,
@@ -100,6 +106,7 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
           queueType: null,
           queueIndex: -1,
           isTyping: false,
+          lastActivityAt: Date.now(),
         };
         newAgents.set(backendAgent.id, animState);
 
@@ -149,6 +156,11 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
       patchAgent(agentId, (agent) => ({
         backendState: meta.backendState,
         name: meta.name ?? agent.name,
+        nativeId: meta.nativeId ?? agent.nativeId,
+        activeChat:
+          meta.activeChat === undefined
+            ? agent.activeChat
+            : (meta.activeChat ?? null),
         // `??` (not `||`) so an explicit empty-string currentTask clears the
         // previous task — only null/undefined fall back. See QA-012.
         currentTask: meta.currentTask ?? agent.currentTask,
@@ -158,6 +170,9 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
       patchAgent(agentId, { queueType, queueIndex }),
 
     setAgentTyping: (agentId, isTyping) => patchAgent(agentId, { isTyping }),
+
+    touchAgentActivity: (agentId) =>
+      patchAgent(agentId, { lastActivityAt: Date.now() }),
 
     // ARC-006: apply every moving agent's position/path delta for one animation
     // tick in a single `set()` (one Map clone), instead of one write — and one

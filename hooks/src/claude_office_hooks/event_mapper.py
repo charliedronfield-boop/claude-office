@@ -131,8 +131,37 @@ def _handle_pre_tool_use(
         # Drop the raw tool_input — we've extracted what we need. pop() is used
         # instead of del so this is safe even if tool_input was never set.
         data.pop("tool_input", None)
+    elif _is_message_tool(data["tool_name"]):
+        _handle_agent_message(raw_data, payload, data)
     else:
         data["agent_id"] = "main"
+
+
+def _is_message_tool(tool_name: object) -> bool:
+    """Claude Code's inter-agent messaging tool (built-in or MCP flavoured)."""
+    return isinstance(tool_name, str) and (
+        tool_name == "SendMessage" or tool_name.endswith("send_message")
+    )
+
+
+def _handle_agent_message(
+    raw_data: dict[str, Any],
+    payload: dict[str, Any],
+    data: dict[str, Any],
+) -> None:
+    """Remap a SendMessage call to agent_message (who said what to whom)."""
+    payload["event_type"] = "agent_message"
+    tool_input_raw = raw_data.get("tool_input", {})
+    tool_input = cast(dict[str, Any], tool_input_raw) if isinstance(tool_input_raw, dict) else {}
+    recipient = tool_input.get("to") or tool_input.get("session_id")
+    message = tool_input.get("message")
+    summary = tool_input.get("summary")
+    data["to"] = str(recipient) if recipient else None
+    data["message_text"] = message[:240] if isinstance(message, str) else None
+    data["summary"] = summary if isinstance(summary, str) else None
+    data["agent_id"] = "main"
+    data.pop("tool_input", None)
+    _attach_native_agent(raw_data, data)
 
 
 def _handle_post_tool_use(
@@ -302,6 +331,85 @@ def _handle_notification(raw_data: dict[str, Any], data: dict[str, Any]) -> None
     data["message"] = raw_data.get("message")
 
 
+def _attach_native_agent(raw_data: dict[str, Any], data: dict[str, Any]) -> None:
+    """Carry the subagent id Claude Code adds when a hook fires inside a subagent."""
+    native_agent_id = raw_data.get("agent_id")
+    if native_agent_id:
+        data["native_agent_id"] = native_agent_id
+
+
+_ERROR_TEXT_MAX_LEN = 500
+
+
+def _extract_error_text(raw_data: dict[str, Any]) -> str | None:
+    """Best-effort error text from a failure hook payload.
+
+    The failure hooks are not tightly specified, so look in the usual places:
+    top-level ``error``/``message``/``reason``, then the tool response.
+    """
+    candidates: list[Any] = [raw_data.get(key) for key in ("error", "message", "reason")]
+    response = raw_data.get("tool_response")
+    if isinstance(response, dict):
+        typed_response = cast(dict[str, Any], response)
+        candidates.extend(typed_response.get(key) for key in ("error", "message", "content"))
+    else:
+        candidates.append(response)
+
+    for value in candidates:
+        if isinstance(value, str) and value.strip():
+            return value.strip()[:_ERROR_TEXT_MAX_LEN]
+    return None
+
+
+def _handle_post_tool_use_failure(
+    raw_data: dict[str, Any],
+    payload: dict[str, Any],
+    data: dict[str, Any],
+) -> None:
+    """Map a PostToolUseFailure hook to a failed post_tool_use event."""
+    payload["event_type"] = "post_tool_use"
+    tool_name = raw_data.get("tool_name")
+    data["tool_name"] = tool_name
+    data["tool_input"] = raw_data.get("tool_input")
+    data["success"] = False
+    data["error_type"] = "tool_failure"
+    data["message"] = _extract_error_text(raw_data) or f"{tool_name or 'Tool'} failed"
+    data["agent_id"] = "main"
+    _attach_native_agent(raw_data, data)
+
+
+def _handle_permission_denied(
+    raw_data: dict[str, Any],
+    payload: dict[str, Any],
+    data: dict[str, Any],
+) -> None:
+    """Map a PermissionDenied hook (auto mode refused a tool) to an error event."""
+    payload["event_type"] = "error"
+    tool_name = raw_data.get("tool_name")
+    data["error_type"] = "permission_denied"
+    data["tool_name"] = tool_name
+    data["tool_input"] = raw_data.get("tool_input")
+    data["reason"] = raw_data.get("reason")
+    data["message"] = (
+        _extract_error_text(raw_data) or f"Permission denied for {tool_name or 'tool'}"
+    )
+    data["agent_id"] = "main"
+    _attach_native_agent(raw_data, data)
+
+
+def _handle_stop_failure(
+    raw_data: dict[str, Any],
+    payload: dict[str, Any],
+    data: dict[str, Any],
+) -> None:
+    """Map a StopFailure hook (turn ended with an API error) to an error event."""
+    payload["event_type"] = "error"
+    data["error_type"] = "stop_failure"
+    data["message"] = _extract_error_text(raw_data) or "Claude stopped with an error"
+    data["agent_id"] = "main"
+    _attach_native_agent(raw_data, data)
+
+
 def _handle_session_end(raw_data: dict[str, Any], data: dict[str, Any]) -> None:
     """Populate *data* for a session_end event."""
     data["reason"] = raw_data.get("reason")
@@ -380,6 +488,15 @@ def map_event(
 
     elif event_type == "post_tool_use":
         _handle_post_tool_use(raw_data, payload, data, transcript_path)
+
+    elif event_type == "post_tool_use_failure":
+        _handle_post_tool_use_failure(raw_data, payload, data)
+
+    elif event_type == "permission_denied":
+        _handle_permission_denied(raw_data, payload, data)
+
+    elif event_type == "stop_failure":
+        _handle_stop_failure(raw_data, payload, data)
 
     elif event_type == "subagent_start":
         result = _handle_native_subagent_start(raw_data, payload, data, transcript_path)

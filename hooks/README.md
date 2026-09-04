@@ -20,7 +20,7 @@ The hooks package bridges Claude Code and the visualizer:
 
 - **Event Capture**: Intercepts Claude Code lifecycle events (tool use, prompts, sessions)
 - **Event Mapping**: Transforms raw hook data into backend-compatible event payloads
-- **Silent Operation**: Never outputs to stdout/stderr to avoid disrupting Claude
+- **Silent Operation**: Never outputs to stdout/stderr to avoid disrupting Claude, with one deliberate exception (see [Approve/Deny from the office UI](#approvedeny-from-the-office-ui))
 - **Fail-Safe**: Always exits with code 0 to prevent blocking Claude actions
 
 ## Architecture
@@ -119,6 +119,12 @@ CLAUDE_OFFICE_DEBUG=0
 # (here or as an environment variable — env wins), the hook sends it as
 # X-API-Key on every event POST.
 # CLAUDE_OFFICE_API_KEY=
+
+# How long (seconds) the PermissionRequest hook waits for a human to click
+# Approve/Deny in the office UI before giving up silently. Must stay well
+# under the hook's own settings.json timeout (manage_hooks.py adds 20s of
+# headroom automatically when you set this before running install.sh).
+# CLAUDE_OFFICE_PERMISSION_TIMEOUT=110
 ```
 
 | Variable | Default | Description |
@@ -128,6 +134,7 @@ CLAUDE_OFFICE_DEBUG=0
 | `CLAUDE_OFFICE_API_URL` | `http://localhost:8000/api/v1/events` | Backend event endpoint. Non-localhost values are reset to the default unless `CLAUDE_OFFICE_ALLOW_REMOTE=1`. |
 | `CLAUDE_OFFICE_ALLOW_REMOTE` | `0` | Set to `1` to permit a non-localhost backend (e.g. a remote/dedicated server). Off by default since event payloads carry tool I/O and file paths. |
 | `CLAUDE_OFFICE_API_KEY` | (empty) | API key sent as `X-API-Key`. Required when the backend sets an explicit `CLAUDE_OFFICE_API_KEY`; env var takes precedence over the config file. |
+| `CLAUDE_OFFICE_PERMISSION_TIMEOUT` | `110` | Seconds the `PermissionRequest` hook waits for an Approve/Deny click before giving up silently. Set this **before** running `install.sh` — it also drives that hook's own `settings.json` timeout (`+20s` headroom). |
 
 ### Strip Prefixes
 
@@ -154,8 +161,12 @@ Or edit the config file and restart Claude Code.
 | `SessionEnd` | `session_end` | Cleanup, boss leaves |
 | `PreToolUse` | `pre_tool_use` | Show working state |
 | `PreToolUse` (Task) | `subagent_start` | Spawn employee agent |
+| `PreToolUse` (SendMessage) | `agent_message` | Two characters pull each other aside for a chat |
 | `PostToolUse` | `post_tool_use` | Clear working state |
 | `PostToolUse` (Task) | `subagent_stop` | Employee completes work |
+| `PostToolUseFailure` | `post_tool_use` (`success: false`) | Tool failure shows up in the Issues panel |
+| `PermissionDenied` | `error` (`permission_denied`) | Auto-mode refusal shows up in the Issues panel |
+| `StopFailure` | `error` (`stop_failure`) | API/turn failure shows up in the Issues panel |
 | `UserPromptSubmit` | `user_prompt_submit` | Phone rings, boss receives |
 | `UserPromptSubmit` (task-notification) | `background_task_notification` | Background task completed |
 | `PermissionRequest` | `permission_request` | Show waiting state |
@@ -163,6 +174,41 @@ Or edit the config file and restart Claude Code.
 | `Stop` | `stop` | Boss completing |
 | `PreCompact` | `context_compaction` | Trigger compaction animation |
 | `SubagentStart` | `subagent_info` | Update agent with native ID |
+
+### Approve/Deny from the office UI
+
+`PermissionRequest` is the one hook that doesn't fire-and-forget. After
+POSTing the usual `permission_request` event, it makes a second call —
+`GET /api/v1/permissions/{tool_use_id}/wait?timeout=<CLAUDE_OFFICE_PERMISSION_TIMEOUT>`
+— and holds the connection open. Clicking **Approve** or **Deny** on that
+request's card in the office's Issues panel calls
+`POST /api/v1/permissions/{tool_use_id}/decide`, which wakes the waiting
+hook up; the hook then prints Claude Code's `PermissionRequest` decision
+JSON to stdout (the *only* place this package ever writes to stdout) and
+exits.
+
+This can only make Claude Code's own prompt disappear early with an actual
+answer — it can never make one appear where there wasn't one, and it can
+never silently allow anything. Every failure mode (nobody clicks in time,
+the backend is unreachable, the printed JSON doesn't match what your Claude
+Code version expects) degrades to exactly today's behavior: the normal
+interactive terminal prompt. If you never see the office UI update your
+decision, the terminal prompt is always still the source of truth.
+
+### Shared knowledge board
+
+The office UI's **Notes** tab is a small, per-room corkboard. You can pin a
+note yourself, and every real inter-agent chat (a `SendMessage` call —
+see `agent_message` above) is automatically pinned as one too, so a hint
+one agent gives another sticks around after the chat animation ends.
+
+`UserPromptSubmit` reads the board back (a fast, 1.5s-budget GET — never
+the long PermissionRequest-style wait) and, if there's anything on it,
+prints it as `additionalContext` so the boss sees accumulated notes on its
+next turn. This is the one documented, verifiable injection point available
+— there is no hook that lets this package rewrite a *new* subagent's
+initial prompt, so getting a note in front of a specific subagent still
+means the boss (or you) passing it along explicitly.
 
 ### Event Data Mapping
 

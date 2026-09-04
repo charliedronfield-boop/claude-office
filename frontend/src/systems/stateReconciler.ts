@@ -23,6 +23,11 @@ import {
 import type { Agent, GameState, Position } from "@/types";
 import { MIN_DESK_COUNT } from "@/constants/positions";
 
+/** Identity of a chat for change detection: a relocation counts as new. */
+function chatKey(chat: Agent["activeChat"]): string | null {
+  return chat ? `${chat.id}:${chat.location}` : null;
+}
+
 // ============================================================================
 // SPAWN-POLICY (pure) — the 4-way branch extracted from handleStateUpdate.
 // ============================================================================
@@ -182,30 +187,51 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
         store.enqueueBubble(backendAgent.id, backendAgent.bubble);
       }
     } else if (currentAgentIds.has(backendAgent.id)) {
+      const agent = store.agents.get(backendAgent.id);
+      const stateChanged = agent?.backendState !== backendAgent.state;
+      const previousChat = chatKey(agent?.activeChat);
+      const nextChat = chatKey(backendAgent.activeChat);
+
       // Update existing agent's backend state, name, and task.
       // (Name and task may have been enriched by AI after initial spawn.)
       store.updateAgentMeta(backendAgent.id, {
         backendState: backendAgent.state,
         name: backendAgent.name ?? null,
         currentTask: backendAgent.currentTask ?? null,
+        nativeId: backendAgent.nativeId ?? null,
+        activeChat: backendAgent.activeChat ?? null,
       });
 
       // Enqueue bubbles for agents who are at their desk working.
       // Only show bubbles when agent is at desk (phase === "idle").
-      // This prevents showing tool calls during arrival/departure animations.
-      const agent = store.agents.get(backendAgent.id);
+      // This prevents showing tool calls during arrival/departure animations
+      // and strolls; a bubble that arrives mid-stroll is shown once the agent
+      // is back at its desk.
       const isAtDesk = agent?.phase === "idle";
+      let hasNewBubble = false;
 
-      if (backendAgent.bubble && isAtDesk) {
+      if (backendAgent.bubble) {
         const bubbleText = backendAgent.bubble.text;
         const lastSeen = ctx.lastSeenBubbleText.get(backendAgent.id);
-        // Only enqueue if backend sent a NEW bubble text (not the same as last time).
-        if (bubbleText !== lastSeen) {
+        hasNewBubble = bubbleText !== lastSeen;
+        if (hasNewBubble && isAtDesk) {
           ctx.lastSeenBubbleText.set(backendAgent.id, bubbleText);
           if (!store.hasBubbleText(backendAgent.id, bubbleText)) {
             store.enqueueBubble(backendAgent.id, backendAgent.bubble);
           }
         }
+      }
+
+      if (stateChanged || hasNewBubble) {
+        agentMachineService.notifyActivity(backendAgent.id);
+      }
+
+      // Chats: a new (or relocated) chat sends the agent to its spot; a
+      // cleared one calls it back.
+      if (nextChat && nextChat !== previousChat && backendAgent.activeChat) {
+        agentMachineService.startChat(backendAgent.id, backendAgent.activeChat);
+      } else if (!nextChat && previousChat) {
+        agentMachineService.endChat(backendAgent.id);
       }
     }
   }

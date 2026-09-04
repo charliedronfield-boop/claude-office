@@ -320,11 +320,14 @@ export const AgentArms = memo(AgentArmsComponent);
 export interface AgentHeadsetProps {
   position: Position;
   headsetTexture: Texture;
+  /** Room-accent tint (a "which department" cue) — omit for the plain color. */
+  tint?: number;
 }
 
 function AgentHeadsetComponent({
   position,
   headsetTexture,
+  tint,
 }: AgentHeadsetProps): ReactNode {
   return (
     <pixiSprite
@@ -333,6 +336,7 @@ function AgentHeadsetComponent({
       x={position.x}
       y={position.y - 38}
       scale={{ x: 0.66825, y: 0.675 }}
+      tint={tint}
     />
   );
 }

@@ -101,6 +101,30 @@ const es: Record<TranslationKey, string> = {
   "settings.building.saveFailed": "Error al guardar: {status} {statusText}",
   "settings.building.saveUnreachable":
     "No se puede conectar con el servidor — ¿está en ejecución?",
+  "settings.tabs.rooms": "Salas",
+  "settings.rooms.hint":
+    "Renombra las cuatro salas de roles, cámbiales el color o cambia qué palabras clave de subagent_type dirigen a cada una.",
+  "settings.rooms.roomName": "Nombre de la Sala",
+  "settings.rooms.accentColor": "Color",
+  "settings.rooms.keywords": "Palabras clave de enrutamiento",
+  "settings.rooms.keywordsPlaceholder": "script, writer, research",
+  "settings.rooms.pins": "Fijaciones de tipo de agente",
+  "settings.rooms.pinsHint":
+    "Fija un subagent_type exacto a una sala — se comprueba antes que las palabras clave, para tipos que no deberían enrutarse por palabra clave.",
+  "settings.rooms.addPin": "+ Agregar fijación",
+  "settings.rooms.pinAgentType": "Tipo de agente",
+  "settings.rooms.pinAgentTypePlaceholder": "general-purpose",
+  "settings.rooms.pinRoom": "Sala",
+  "settings.rooms.removePin": "Eliminar",
+  "settings.rooms.noPins": "No hay fijaciones configuradas",
+  "settings.rooms.save": "Guardar",
+  "settings.rooms.saving": "Guardando...",
+  "settings.rooms.saved": "¡Guardado!",
+  "settings.rooms.saveFailed": "Error al guardar: {status} {statusText}",
+  "settings.rooms.saveUnreachable":
+    "No se puede conectar con el servidor — ¿está en ejecución?",
+  "settings.rooms.unsavedWarning":
+    "Tienes cambios sin guardar en las salas. ¿Descartarlos?",
 
   // Sessions
   "sessions.title": "Sesiones",
@@ -118,6 +142,53 @@ const es: Record<TranslationKey, string> = {
   // Right Sidebar
   "sidebar.events": "Eventos",
   "sidebar.conversation": "Conversación",
+  "sidebar.issues": "Problemas",
+  "sidebar.notes": "Notas",
+
+  // Notes panel (shared knowledge board)
+  "notes.title": "Tablero de conocimiento",
+  "notes.empty": "Aún no hay notas — deja una o espera a que el equipo chatee.",
+  "notes.placeholder": "Deja una nota para la sala...",
+  "notes.send": "Enviar",
+  "notes.delete": "Eliminar nota",
+
+  // Issues panel
+  "issues.title": "Problemas",
+  "issues.openCount": "{count} abiertos",
+  "issues.openCount_one": "{count} abierto",
+  "issues.openCount_other": "{count} abiertos",
+  "issues.empty": "Sin problemas — la oficina funciona sin contratiempos.",
+  "issues.exportCsv": "Exportar como CSV",
+  "issues.exportMarkdown": "Exportar como Markdown",
+  "issues.resolved": "Resueltos",
+  "issues.whatHappened": "Qué pasó",
+  "issues.suggestedFix": "Solución sugerida",
+  "issues.agent": "Quién",
+  "issues.boss": "Claude (jefe)",
+  "issues.tool": "Herramienta",
+  "issues.toolInput": "Entrada de la herramienta",
+  "issues.openTerminal": "Abrir terminal",
+  "issues.copyError": "Copiar error",
+  "issues.copied": "¡Copiado!",
+  "issues.markFixed": "Marcar como resuelto",
+  "issues.resolvedAt": "Resuelto a las",
+  "issues.severity.critical": "Crítico",
+  "issues.severity.high": "Alto",
+  "issues.severity.low": "Bajo",
+  "issues.approve": "Aprobar",
+  "issues.deny": "Denegar",
+  "issues.decideHint":
+    "Aprobar/Denegar responde directamente si la solicitud sigue esperando; si no, usa Abrir terminal.",
+
+  // Replay
+  "replay.start": "Repetición",
+  "replay.loading": "Cargando…",
+  "replay.play": "Reproducir",
+  "replay.pause": "Pausar",
+  "replay.exit": "Salir de la repetición",
+  "replay.finished": "Listo",
+  "replay.empty": "Aún no hay nada que repetir",
+  "replay.fetchFailed": "No se pudo cargar la repetición",
 
   // Event Log
   "eventLog.title": "Registro de Eventos",
@@ -248,6 +319,21 @@ const es: Record<TranslationKey, string> = {
   "tour.steps.settings.title": "Configurar Pisos",
   "tour.steps.settings.description":
     "Abre Configuración para agregar pisos y mapear carpetas de proyectos para una vista de edificio multi-piso.",
+  "tour.steps.roomsChats.title": "Salas de roles y chats",
+  "tour.steps.roomsChats.description":
+    "Los agentes se dirigen a salas de roles con paredes — Guion, Edición, Miniaturas y SEO, Publicación — según su tarea. Cuando se envían mensajes entre ellos o con el jefe, caminan hasta un punto de chat o la mesa de reuniones, y cada chat real se guarda en el tablero de notas de esa sala.",
+  "tour.steps.issuesTab.title": "Soluciona problemas aquí",
+  "tour.steps.issuesTab.description":
+    "Los fallos de herramientas, denegaciones de permisos y todo lo que espera tu atención aparece en la pestaña Problemas — toca una tarjeta para ver qué pasó y saltar directo a la terminal.",
+  "tour.steps.whiteboard.title": "La pizarra",
+  "tour.steps.whiteboard.description":
+    "Haz clic en la pizarra de la pared (o usa sus atajos) para recorrer las vistas — un tablero kanban, el pipeline de producción, ediciones de archivos recientes y un tablero de aciertos/fallos por sala.",
+  "tour.steps.replay.title": "Reproducir una sesión",
+  "tour.steps.replay.description":
+    "Una vez que una sesión ha terminado, el botón Reproducir en la esquina recorre todo lo que sucedió, a la velocidad que elijas.",
+  "tour.steps.commandCenter.title": "Centro de Comando",
+  "tour.steps.commandCenter.description":
+    "Todas las sesiones de terminal, de un vistazo — agrupadas según si necesitan tu atención, están trabajando o acaban de terminar. Haz clic para abrirlo.",
   "tour.skip": "Saltar tour",
   "tour.next": "Siguiente",
 
@@ -262,6 +348,7 @@ const es: Record<TranslationKey, string> = {
   "attention.commandBar.focusAgent": "Enfocar Agente: {name}",
   "attention.commandBar.focusBoss": "Enfocar Terminal del Jefe",
   "attention.commandBar.showAttention": "Mostrar Cola de Atención",
+  "attention.commandBar.searchHistory": "Buscar en el Historial de Sesiones...",
   "attention.commandBar.dismissAll": "Descartar Todas las Notificaciones",
   "attention.commandBar.toggleDebug": "Alternar Vista de Depuración",
   "attention.commandBar.togglePaths": "Alternar Mostrar Rutas",
@@ -269,6 +356,12 @@ const es: Record<TranslationKey, string> = {
   "attention.commandBar.togglePhaseLabels": "Alternar Etiquetas de Fase",
   "attention.commandBar.toggleObstacles": "Alternar Obstáculos",
   "attention.commandBar.noResults": "Sin comandos coincidentes",
+  "search.title": "Buscar en el Historial de Sesiones",
+  "search.placeholder": "Buscar en todas las sesiones...",
+  "search.emptyHint": "Escribe para buscar llamadas a herramientas, errores y chats en todas las sesiones.",
+  "search.searching": "Buscando...",
+  "search.error": "Error al buscar — ¿el servidor está en ejecución?",
+  "search.noResults": "No hay eventos coincidentes",
   "attention.popup.focusTerminal": "Enfocar Terminal",
   "attention.popup.close": "Cerrar",
   "attention.popup.state": "Estado",
@@ -285,6 +378,7 @@ const es: Record<TranslationKey, string> = {
   "settings.filterError": "Errores y paradas",
   "settings.filterTaskComplete": "Tareas completadas",
   "settings.filterArrival": "Llegadas de agentes",
+  "settings.criticalIssueAudio": "Reproducir un sonido en problemas críticos",
 };
 
 export default es;

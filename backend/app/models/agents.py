@@ -10,6 +10,9 @@ __all__ = [
     "BossState",
     "Agent",
     "Boss",
+    "ChatInfo",
+    "ChatKind",
+    "ChatLocation",
     "ElevatorState",
     "PhoneState",
     "OfficeState",
@@ -31,6 +34,38 @@ class AgentState(StrEnum):
     LEAVING = "leaving"
     IN_ELEVATOR = "in_elevator"
     IDLE = "idle"
+    CHATTING = "chatting"
+
+
+class ChatKind(StrEnum):
+    """Who is talking to whom."""
+
+    PEER = "peer"  # agent <-> agent
+    BOSS = "boss"  # boss <-> one agent
+    MEETING = "meeting"  # boss addressing several agents
+
+
+class ChatLocation(StrEnum):
+    """Where the characters meet for the chat."""
+
+    ROOM = "room"  # both agents share a room: chat in its open area
+    MEETING_TABLE = "meeting_table"  # cross-room chats and group syncs
+    BOSS_DESK = "boss_desk"  # the agent comes over to the boss
+
+
+class ChatInfo(BaseModel):
+    """An in-progress conversation attached to a character."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    id: str
+    partner_id: str  # agent id, or "main" for the boss
+    partner_name: str | None = None
+    text: str
+    kind: ChatKind
+    location: ChatLocation
+    is_speaker: bool
+    started_at: str  # ISO timestamp
 
 
 class BossState(StrEnum):
@@ -62,6 +97,9 @@ class Agent(BaseModel):
     bubble: BubbleContent | None = None
     current_task: str | None = None
     position: dict[str, int] = {"x": 0, "y": 0}
+    role_type: str | None = None  # subagent_type the agent was spawned with
+    room_id: str | None = None  # office_rooms.Room.id derived from the assigned desk
+    active_chat: ChatInfo | None = None
     # Agent Teams character hierarchy (Phase 4)
     character_type: str | None = None  # "lead" | "teammate" | "subagent"
     parent_session_id: str | None = None  # session that owns this character
@@ -77,6 +115,7 @@ class Boss(BaseModel):
     current_task: str | None = None
     bubble: BubbleContent | None = None
     position: dict[str, int] = {"x": 640, "y": 830}
+    active_chat: ChatInfo | None = None
 
 
 class ElevatorState(StrEnum):

@@ -13,6 +13,7 @@ Available scenarios
 - ``edge_cases`` — Error paths, permission requests, and unusual event sequences.
 - ``quick``      — Fast (~30 s) full-lifecycle smoke scenario.
 - ``teams``      — Multi-session team scenario exercising the room-orchestrator merge.
+- ``youtube``    — Four YouTube-production roles routed into their own rooms.
 """
 
 from collections.abc import Callable
@@ -23,6 +24,7 @@ from .complex import run as run_complex
 from .edge_cases import run as run_edge_cases
 from .quick import run as run_quick
 from .teams import run as run_teams
+from .youtube import run as run_youtube
 
 SCENARIOS: dict[str, Callable[[SimulationContext], None]] = {
     "basic": run_basic,
@@ -30,6 +32,7 @@ SCENARIOS: dict[str, Callable[[SimulationContext], None]] = {
     "edge_cases": run_edge_cases,
     "quick": run_quick,
     "teams": run_teams,
+    "youtube": run_youtube,
 }
 
 __all__ = [
@@ -40,4 +43,5 @@ __all__ = [
     "run_edge_cases",
     "run_quick",
     "run_teams",
+    "run_youtube",
 ]

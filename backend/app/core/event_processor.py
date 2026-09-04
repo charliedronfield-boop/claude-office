@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import httpx
 from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -49,7 +50,9 @@ from app.core.handlers import (
     handle_user_prompt_submit,
 )
 from app.core.jsonl_parser import get_last_assistant_response
+from app.core.permission_gate import get_permission_gate
 from app.core.product_mapper import get_product_mapper
+from app.core.room_notes import add_note
 from app.core.room_orchestrator import RoomOrchestrator
 from app.core.state_machine import StateMachine
 from app.core.task_file_poller import init_task_file_poller
@@ -61,6 +64,7 @@ from app.models.agents import AgentState
 from app.models.common import TodoItem
 from app.models.events import (
     AgentEvent,
+    AgentMessageEvent,
     AnyEvent,
     BackgroundTaskEvent,
     EventAdapter,
@@ -533,6 +537,48 @@ class EventProcessor:
 
         sm.transition(event)
 
+        # Every real inter-agent chat sticks around on the room's knowledge
+        # board, not just as a passing speech bubble. Best-effort: a DB
+        # hiccup here must never break message delivery/chat visuals.
+        if event.event_type == EventType.AGENT_MESSAGE:
+            assert isinstance(event, AgentMessageEvent)
+            try:
+                await self._note_agent_message(sm, event)
+            except Exception:
+                logger.exception("Failed to record room note for agent_message")
+
+        # Register a waiter for the office UI's Approve/Deny buttons. The
+        # hook process that raised this PermissionRequest may be blocked on
+        # GET /permissions/{tool_use_id}/wait right now (see
+        # hooks/src/claude_office_hooks/main.py); this makes the request
+        # visible to that wait and to POST .../decide.
+        if event.event_type == EventType.PERMISSION_REQUEST:
+            assert isinstance(event, ToolEvent)
+            if event.data.tool_use_id:
+                character = sm.resolve_character(event.data.agent_id, event.data.native_agent_id)
+                get_permission_gate().register(
+                    tool_use_id=event.data.tool_use_id,
+                    session_id=event.session_id,
+                    agent_id=character,
+                    tool_name=event.data.tool_name,
+                    tool_input=event.data.tool_input,
+                )
+                self._notify_critical_issue(
+                    f"⚠️ {event.data.tool_name or 'A tool'} needs your approval",
+                    session_id=event.session_id,
+                )
+
+        # Critical issues (auto-mode denials, turn/API failures) optionally
+        # push to a webhook — see Settings.CRITICAL_ISSUE_WEBHOOK_URL.
+        if event.event_type == EventType.ERROR:
+            assert isinstance(event, LifecycleEvent)
+            if event.data.error_type in ("permission_denied", "stop_failure"):
+                label = (event.data.error_type or "error").replace("_", " ").capitalize()
+                self._notify_critical_issue(
+                    f"🔴 {label}: {event.data.message or 'see the Issues panel'}",
+                    session_id=event.session_id,
+                )
+
         # Apply resolved floor/room to in-memory state machine.
         if resolved_floor_id:
             sm.floor_id = resolved_floor_id
@@ -562,6 +608,14 @@ class EventProcessor:
             ("task_description", "taskDescription"),
             ("agent_name", "agentName"),
             ("prompt", "prompt"),
+            ("success", "success"),
+            ("reason", "reason"),
+            ("notification_type", "notificationType"),
+            ("native_agent_id", "nativeAgentId"),
+            ("background_task_status", "backgroundTaskStatus"),
+            ("to", "to"),
+            ("message_text", "messageText"),
+            ("tool_use_id", "toolUseId"),
         ]:
             val = getattr(event.data, src, None)
             if val is not None:
@@ -615,6 +669,7 @@ class EventProcessor:
             if beads:
                 await beads.stop_polling(event.session_id)
             self._beads_sessions.discard(event.session_id)
+            self._notify_session_digest(sm, session_id=event.session_id)
 
         # ------------------------------------------------------------------
         # Default state broadcast + history event notification
@@ -942,6 +997,86 @@ class EventProcessor:
             async with self._sessions_lock:
                 self.sessions[session_id] = sm
 
+    def _post_webhook(self, url: str, message: str, *, session_id: str, label: str) -> None:
+        """Fire-and-forget POST of *message* to *url*, no-op when *url* is empty.
+
+        Scheduled as a background task rather than awaited: a slow or
+        unreachable webhook must never add latency to event processing, and
+        any failure is logged (tagged with *label*), not raised.
+        """
+        if not url:
+            return
+
+        async def _post() -> None:
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    await client.post(url, json={"text": message, "sessionId": session_id})
+            except Exception:
+                logger.warning("%s webhook POST failed", label, exc_info=True)
+
+        asyncio.create_task(_post())
+
+    def _notify_critical_issue(self, message: str, *, session_id: str) -> None:
+        """Fire-and-forget POST of *message* to Settings.CRITICAL_ISSUE_WEBHOOK_URL.
+
+        No-op when the setting is empty (the default).
+        """
+        self._post_webhook(
+            get_settings().CRITICAL_ISSUE_WEBHOOK_URL,
+            message,
+            session_id=session_id,
+            label="Critical-issue",
+        )
+
+    def _notify_session_digest(self, sm: StateMachine, *, session_id: str) -> None:
+        """Fire-and-forget POST of a plain-language shift summary at session end.
+
+        No-op when Settings.SESSION_DIGEST_WEBHOOK_URL is empty (the
+        default). Deliberately a deterministic tally over sm.history rather
+        than an LLM summary — no extra latency/cost on the session-end path,
+        and nothing to get subtly wrong.
+        """
+        url = get_settings().SESSION_DIGEST_WEBHOOK_URL
+        if not url:
+            return
+
+        tool_calls = 0
+        failed_calls = 0
+        chats = 0
+        for entry in sm.history:
+            if entry["type"] == "post_tool_use":
+                tool_calls += 1
+                if entry["detail"].get("success") is False:
+                    failed_calls += 1
+            elif entry["type"] == "agent_message":
+                chats += 1
+
+        parts = [f"🏁 Session wrapped: {len(sm.agents)} agent(s), {tool_calls} tool call(s)"]
+        if failed_calls:
+            parts.append(f"{failed_calls} failed")
+        if chats:
+            parts.append(f"{chats} chat(s)")
+        message = ", ".join(parts)
+
+        self._post_webhook(url, message, session_id=session_id, label="Session-digest")
+
+    async def _note_agent_message(self, sm: StateMachine, event: AgentMessageEvent) -> None:
+        """Append a real inter-agent chat to whichever agent's room it happened in."""
+        sender = sm.resolve_character(event.data.agent_id, event.data.native_agent_id)
+        recipient = sm.resolve_recipient(event.data.to)
+        room_id = next(
+            (sm.agents[key].room_id for key in (recipient, sender) if key in sm.agents),
+            None,
+        )
+        if room_id is None:
+            return
+        sender_name = "Claude" if sender == "main" else sm.agents[sender].name or sender
+        text = (event.data.summary or event.data.message_text or "").strip()
+        if not text:
+            return
+        async with AsyncSessionLocal() as db:
+            await add_note(db, room_id, f"{sender_name}: {text}", source="chat")
+
     async def _persist_event(
         self,
         event: AnyEvent,
@@ -1181,6 +1316,9 @@ class EventProcessor:
                 return f"Using {tool} {target}".strip()
             case EventType.POST_TOOL_USE:
                 assert isinstance(event, ToolEvent)
+                if event.data.success is False:
+                    reason = event.data.message or event.data.error_type or "unknown error"
+                    return f"Failed {event.data.tool_name or 'tool'}: {reason}"
                 return f"Completed {event.data.tool_name or 'tool'}"
             case EventType.USER_PROMPT_SUBMIT:
                 assert isinstance(event, PromptEvent)
@@ -1235,7 +1373,8 @@ class EventProcessor:
                 return f"Agent {event.data.agent_id or 'unknown'} leaving"
             case EventType.ERROR:
                 assert isinstance(event, LifecycleEvent)
-                return f"Error: {event.data.message or 'unknown error'}"
+                label = (event.data.error_type or "error").replace("_", " ").capitalize()
+                return f"{label}: {event.data.message or 'unknown error'}"
             case EventType.BACKGROUND_TASK_NOTIFICATION:
                 assert isinstance(event, BackgroundTaskEvent)
                 task_id = event.data.background_task_id or "unknown"
@@ -1260,6 +1399,13 @@ class EventProcessor:
                 assert isinstance(event, LifecycleEvent)
                 name = event.data.teammate_name or "Teammate"
                 return f"{name} went idle"
+            case EventType.AGENT_MESSAGE:
+                assert isinstance(event, AgentMessageEvent)
+                sender = event.data.agent_id or "main"
+                text = event.data.summary or event.data.message_text or ""
+                if len(text) > 60:
+                    text = f"{text[:57]}..."
+                return f"{sender} → {event.data.to or 'someone'}: {text}"
             case _:
                 return f"Event: {event.event_type}"
 

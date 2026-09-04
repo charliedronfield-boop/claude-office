@@ -101,6 +101,30 @@ const ptBR: Record<TranslationKey, string> = {
   "settings.building.saveFailed": "Falha ao salvar: {status} {statusText}",
   "settings.building.saveUnreachable":
     "Não foi possível conectar ao servidor — ele está em execução?",
+  "settings.tabs.rooms": "Salas",
+  "settings.rooms.hint":
+    "Renomeie as quatro salas de função, recolora-as ou altere quais palavras-chave de subagent_type roteiam para cada uma.",
+  "settings.rooms.roomName": "Nome da Sala",
+  "settings.rooms.accentColor": "Cor",
+  "settings.rooms.keywords": "Palavras-chave de roteamento",
+  "settings.rooms.keywordsPlaceholder": "script, writer, research",
+  "settings.rooms.pins": "Fixações de tipo de agente",
+  "settings.rooms.pinsHint":
+    "Fixa um subagent_type exato a uma sala — verificado antes da correspondência por palavra-chave, para tipos que não devem ser roteados por palavra-chave.",
+  "settings.rooms.addPin": "+ Adicionar fixação",
+  "settings.rooms.pinAgentType": "Tipo de agente",
+  "settings.rooms.pinAgentTypePlaceholder": "general-purpose",
+  "settings.rooms.pinRoom": "Sala",
+  "settings.rooms.removePin": "Remover",
+  "settings.rooms.noPins": "Nenhuma fixação configurada",
+  "settings.rooms.save": "Salvar",
+  "settings.rooms.saving": "Salvando...",
+  "settings.rooms.saved": "Salvo!",
+  "settings.rooms.saveFailed": "Falha ao salvar: {status} {statusText}",
+  "settings.rooms.saveUnreachable":
+    "Não foi possível conectar ao servidor — ele está em execução?",
+  "settings.rooms.unsavedWarning":
+    "Você tem alterações não salvas nas salas. Descartá-las?",
 
   // Sessions
   "sessions.title": "Sessões",
@@ -118,6 +142,53 @@ const ptBR: Record<TranslationKey, string> = {
   // Right Sidebar
   "sidebar.events": "Eventos",
   "sidebar.conversation": "Conversa",
+  "sidebar.issues": "Problemas",
+  "sidebar.notes": "Notas",
+
+  // Notes panel (shared knowledge board)
+  "notes.title": "Quadro de conhecimento",
+  "notes.empty": "Ainda sem notas — deixe uma ou espere o time conversar.",
+  "notes.placeholder": "Deixe uma nota para a sala...",
+  "notes.send": "Enviar",
+  "notes.delete": "Excluir nota",
+
+  // Issues panel
+  "issues.title": "Problemas",
+  "issues.openCount": "{count} abertos",
+  "issues.openCount_one": "{count} aberto",
+  "issues.openCount_other": "{count} abertos",
+  "issues.empty": "Sem problemas — o escritório está funcionando bem.",
+  "issues.exportCsv": "Exportar como CSV",
+  "issues.exportMarkdown": "Exportar como Markdown",
+  "issues.resolved": "Resolvidos",
+  "issues.whatHappened": "O que aconteceu",
+  "issues.suggestedFix": "Correção sugerida",
+  "issues.agent": "Quem",
+  "issues.boss": "Claude (chefe)",
+  "issues.tool": "Ferramenta",
+  "issues.toolInput": "Entrada da ferramenta",
+  "issues.openTerminal": "Abrir terminal",
+  "issues.copyError": "Copiar erro",
+  "issues.copied": "Copiado!",
+  "issues.markFixed": "Marcar como resolvido",
+  "issues.resolvedAt": "Resolvido às",
+  "issues.severity.critical": "Crítico",
+  "issues.severity.high": "Alto",
+  "issues.severity.low": "Baixo",
+  "issues.approve": "Aprovar",
+  "issues.deny": "Negar",
+  "issues.decideHint":
+    "Aprovar/Negar responde diretamente se o pedido ainda estiver esperando; caso contrário, use Abrir terminal.",
+
+  // Replay
+  "replay.start": "Repetição",
+  "replay.loading": "Carregando…",
+  "replay.play": "Reproduzir",
+  "replay.pause": "Pausar",
+  "replay.exit": "Sair da repetição",
+  "replay.finished": "Concluído",
+  "replay.empty": "Ainda não há nada para repetir",
+  "replay.fetchFailed": "Não foi possível carregar a repetição",
 
   // Event Log
   "eventLog.title": "Log de Eventos",
@@ -248,6 +319,21 @@ const ptBR: Record<TranslationKey, string> = {
   "tour.steps.settings.title": "Configurar Andares",
   "tour.steps.settings.description":
     "Abra Configurações para adicionar andares e mapear pastas de projetos para uma visão de edifício multi-andar.",
+  "tour.steps.roomsChats.title": "Salas de função e conversas",
+  "tour.steps.roomsChats.description":
+    "Os agentes são direcionados para salas de função com paredes — Roteiro, Edição, Miniaturas e SEO, Publicação — de acordo com sua tarefa. Quando trocam mensagens entre si ou com o chefe, eles caminham até um ponto de conversa ou a mesa de reunião, e cada conversa real fica salva no quadro de notas daquela sala.",
+  "tour.steps.issuesTab.title": "Resolva problemas aqui",
+  "tour.steps.issuesTab.description":
+    "Falhas de ferramentas, permissões negadas e qualquer coisa esperando por você aparecem na aba Problemas — toque em um cartão para ver o que aconteceu e ir direto ao terminal.",
+  "tour.steps.whiteboard.title": "O quadro branco",
+  "tour.steps.whiteboard.description":
+    "Clique no quadro branco na parede (ou use seus atalhos) para percorrer as visualizações — um quadro kanban, o pipeline de produção, edições de arquivos recentes e um quadro de acertos/falhas por sala.",
+  "tour.steps.replay.title": "Reproduzir uma sessão",
+  "tour.steps.replay.description":
+    "Depois que uma sessão termina, o botão Replay no canto percorre tudo o que aconteceu, na velocidade que você escolher.",
+  "tour.steps.commandCenter.title": "Central de Comando",
+  "tour.steps.commandCenter.description":
+    "Todas as sessões de terminal, em um relance — agrupadas conforme precisam de você, estão trabalhando ou acabaram de terminar. Clique para abrir.",
   "tour.skip": "Pular tour",
   "tour.next": "Próximo",
 
@@ -262,6 +348,7 @@ const ptBR: Record<TranslationKey, string> = {
   "attention.commandBar.focusAgent": "Focar Agente: {name}",
   "attention.commandBar.focusBoss": "Focar Terminal do Chefe",
   "attention.commandBar.showAttention": "Mostrar Fila de Atenção",
+  "attention.commandBar.searchHistory": "Buscar no Histórico de Sessões...",
   "attention.commandBar.dismissAll": "Descartar Todas as Notificações",
   "attention.commandBar.toggleDebug": "Alternar Depuração",
   "attention.commandBar.togglePaths": "Alternar Exibição de Caminhos",
@@ -269,6 +356,12 @@ const ptBR: Record<TranslationKey, string> = {
   "attention.commandBar.togglePhaseLabels": "Alternar Rótulos de Fase",
   "attention.commandBar.toggleObstacles": "Alternar Obstáculos",
   "attention.commandBar.noResults": "Nenhum comando encontrado",
+  "search.title": "Buscar no Histórico de Sessões",
+  "search.placeholder": "Buscar em todas as sessões...",
+  "search.emptyHint": "Digite para buscar chamadas de ferramentas, erros e conversas em todas as sessões.",
+  "search.searching": "Buscando...",
+  "search.error": "Falha na busca — o servidor está em execução?",
+  "search.noResults": "Nenhum evento encontrado",
   "attention.popup.focusTerminal": "Focar Terminal",
   "attention.popup.close": "Fechar",
   "attention.popup.state": "Estado",
@@ -285,6 +378,7 @@ const ptBR: Record<TranslationKey, string> = {
   "settings.filterError": "Erros e paradas",
   "settings.filterTaskComplete": "Tarefas concluídas",
   "settings.filterArrival": "Chegadas de agentes",
+  "settings.criticalIssueAudio": "Tocar um som em problemas críticos",
 };
 
 export default ptBR;

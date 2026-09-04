@@ -99,6 +99,30 @@ const en = {
   "settings.building.saveFailed": "Save failed: {status} {statusText}",
   "settings.building.saveUnreachable":
     "Cannot reach backend — is the server running?",
+  "settings.tabs.rooms": "Rooms",
+  "settings.rooms.hint":
+    "Rename the four role rooms, recolor them, or change which subagent_type keywords route into each one.",
+  "settings.rooms.roomName": "Room Name",
+  "settings.rooms.accentColor": "Accent",
+  "settings.rooms.keywords": "Routing keywords",
+  "settings.rooms.keywordsPlaceholder": "script, writer, research",
+  "settings.rooms.pins": "Agent-type pins",
+  "settings.rooms.pinsHint":
+    "Pin an exact subagent_type to a room — checked before keyword matching, for types that shouldn't be keyword-routed.",
+  "settings.rooms.addPin": "+ Add pin",
+  "settings.rooms.pinAgentType": "Agent type",
+  "settings.rooms.pinAgentTypePlaceholder": "general-purpose",
+  "settings.rooms.pinRoom": "Room",
+  "settings.rooms.removePin": "Remove",
+  "settings.rooms.noPins": "No pins configured",
+  "settings.rooms.save": "Save",
+  "settings.rooms.saving": "Saving...",
+  "settings.rooms.saved": "Saved!",
+  "settings.rooms.saveFailed": "Save failed: {status} {statusText}",
+  "settings.rooms.saveUnreachable":
+    "Cannot reach backend — is the server running?",
+  "settings.rooms.unsavedWarning":
+    "You have unsaved room changes. Discard them?",
 
   // Sessions
   "sessions.title": "Sessions",
@@ -116,6 +140,53 @@ const en = {
   // Right Sidebar
   "sidebar.events": "Events",
   "sidebar.conversation": "Conversation",
+  "sidebar.issues": "Issues",
+  "sidebar.notes": "Notes",
+
+  // Notes panel (shared knowledge board)
+  "notes.title": "Knowledge Board",
+  "notes.empty": "No notes yet — pin one, or wait for the team to chat.",
+  "notes.placeholder": "Leave a note for the room...",
+  "notes.send": "Send",
+  "notes.delete": "Delete note",
+
+  // Issues panel
+  "issues.title": "Issues",
+  "issues.openCount": "{count} open",
+  "issues.openCount_one": "{count} open",
+  "issues.openCount_other": "{count} open",
+  "issues.empty": "No problems — the office is running smoothly.",
+  "issues.exportCsv": "Export as CSV",
+  "issues.exportMarkdown": "Export as Markdown",
+  "issues.resolved": "Resolved",
+  "issues.whatHappened": "What happened",
+  "issues.suggestedFix": "Suggested fix",
+  "issues.agent": "Who",
+  "issues.boss": "Claude (boss)",
+  "issues.tool": "Tool",
+  "issues.toolInput": "Tool input",
+  "issues.openTerminal": "Open terminal",
+  "issues.copyError": "Copy error",
+  "issues.copied": "Copied!",
+  "issues.markFixed": "Mark fixed",
+  "issues.resolvedAt": "Resolved at",
+  "issues.severity.critical": "Critical",
+  "issues.severity.high": "High",
+  "issues.severity.low": "Low",
+  "issues.approve": "Approve",
+  "issues.deny": "Deny",
+  "issues.decideHint":
+    "Approve/Deny answers the prompt directly if it's still waiting on you; otherwise use Open Terminal.",
+
+  // Replay
+  "replay.start": "Replay",
+  "replay.loading": "Loading…",
+  "replay.play": "Play",
+  "replay.pause": "Pause",
+  "replay.exit": "Exit replay",
+  "replay.finished": "Done",
+  "replay.empty": "Nothing to replay yet",
+  "replay.fetchFailed": "Couldn't load replay",
 
   // Event Log
   "eventLog.title": "Event Log",
@@ -246,6 +317,21 @@ const en = {
   "tour.steps.settings.title": "Configure Floors",
   "tour.steps.settings.description":
     "Open Settings to add floors and map project folders for a multi-floor building view.",
+  "tour.steps.roomsChats.title": "Role rooms & chats",
+  "tour.steps.roomsChats.description":
+    "Agents are routed into walled role rooms — Scripting, Editing, Thumbnails & SEO, Publishing — by their task. When they message each other or the boss, they walk to a chat spot or the meeting table, and every real chat is saved to that room's knowledge notes board.",
+  "tour.steps.issuesTab.title": "Fix problems here",
+  "tour.steps.issuesTab.description":
+    "Tool failures, permission denials, and anything waiting on you land in the Issues tab — tap a card to see what happened and jump straight to the terminal.",
+  "tour.steps.whiteboard.title": "The whiteboard",
+  "tour.steps.whiteboard.description":
+    "Click the whiteboard on the wall (or use its hotkeys) to cycle through views — a kanban board, the production pipeline, recent file edits, and a per-room pass/fail Room Stats board.",
+  "tour.steps.replay.title": "Replay a session",
+  "tour.steps.replay.description":
+    "Once a session has run, the Replay button in the corner steps back through everything that happened, at your choice of speed.",
+  "tour.steps.commandCenter.title": "Command Center",
+  "tour.steps.commandCenter.description":
+    "Every terminal session, at a glance — bucketed by whether it needs you, is working, or just finished. Click it to open.",
   "tour.skip": "Skip tour",
   "tour.next": "Next",
 
@@ -260,6 +346,7 @@ const en = {
   "attention.commandBar.focusAgent": "Focus Agent: {name}",
   "attention.commandBar.focusBoss": "Focus Boss Terminal",
   "attention.commandBar.showAttention": "Show Attention Queue",
+  "attention.commandBar.searchHistory": "Search Session History...",
   "attention.commandBar.dismissAll": "Dismiss All Toasts",
   "attention.commandBar.toggleDebug": "Toggle Debug View",
   "attention.commandBar.togglePaths": "Toggle Path Display",
@@ -267,6 +354,12 @@ const en = {
   "attention.commandBar.togglePhaseLabels": "Toggle Phase Labels",
   "attention.commandBar.toggleObstacles": "Toggle Obstacles",
   "attention.commandBar.noResults": "No matching commands",
+  "search.title": "Search Session History",
+  "search.placeholder": "Search across every session...",
+  "search.emptyHint": "Type to search tool calls, errors, and chats across every session.",
+  "search.searching": "Searching...",
+  "search.error": "Search failed — is the server running?",
+  "search.noResults": "No matching events",
   "attention.popup.focusTerminal": "Focus Terminal",
   "attention.popup.close": "Close",
   "attention.popup.state": "State",
@@ -283,6 +376,7 @@ const en = {
   "settings.filterError": "Errors and stops",
   "settings.filterTaskComplete": "Task completions",
   "settings.filterArrival": "Agent arrivals",
+  "settings.criticalIssueAudio": "Play a sound on critical issues",
 } as const;
 
 export type TranslationKey = keyof typeof en;

@@ -185,6 +185,91 @@ async def list_sessions(
     return sessions
 
 
+class SearchResult(TypedDict):
+    """One matching event from GET /sessions/search."""
+
+    sessionId: str
+    sessionLabel: str | None
+    eventType: str
+    timestamp: str
+    snippet: str
+
+
+# Preferred fields to pull a snippet from, in priority order — human-readable
+# text most likely to contain (and show useful context around) the match.
+_SNIPPET_FIELDS = (
+    "message",
+    "message_text",
+    "task_description",
+    "reason",
+    "tool_name",
+    "error_type",
+)
+
+
+def _snippet(data: dict[str, Any]) -> str:
+    """Best-effort short excerpt of an event's JSON payload for a search result."""
+    for field in _SNIPPET_FIELDS:
+        value = data.get(field)
+        if isinstance(value, str) and value.strip():
+            return value if len(value) <= 160 else f"{value[:157]}..."
+    # Fall back to any other string field so a match on e.g. tool_input still
+    # shows something rather than an empty snippet.
+    for value in data.values():
+        if isinstance(value, str) and value.strip():
+            return value if len(value) <= 160 else f"{value[:157]}..."
+    return ""
+
+
+@router.get("/search")
+async def search_sessions(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    q: str = Query(..., min_length=1, description="Free-text search across event content"),
+    event_type: str | None = Query(None, description="Restrict to one event type"),
+    limit: int = Query(50, ge=1, le=200),
+) -> list[SearchResult]:
+    """Search event history across every session, not just the current one.
+
+    Simple case-insensitive substring match against the event's JSON payload
+    (cast to text) — not full-text ranking, just "find where this happened".
+    Session labels are joined in so results are readable without a second
+    lookup per row.
+    """
+    from sqlalchemy import String, cast
+
+    stmt = (
+        select(
+            EventRecord, SessionRecord.label, SessionRecord.display_name, SessionRecord.project_name
+        )
+        .join(SessionRecord, EventRecord.session_id == SessionRecord.id)
+        .where(func.lower(cast(EventRecord.data, String)).contains(q.lower()))
+        .order_by(EventRecord.timestamp.desc())
+        .limit(limit)
+    )
+    if event_type:
+        stmt = stmt.where(EventRecord.event_type == event_type)
+
+    result = await db.execute(stmt)
+
+    results: list[SearchResult] = []
+    for rec, label, display_name, project_name in result.all():
+        ts = (
+            rec.timestamp.astimezone(UTC)
+            if rec.timestamp.tzinfo
+            else rec.timestamp.replace(tzinfo=UTC)
+        )
+        results.append(
+            {
+                "sessionId": rec.session_id,
+                "sessionLabel": label or display_name or project_name,
+                "eventType": rec.event_type,
+                "timestamp": ts.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                "snippet": _snippet(rec.data),
+            }
+        )
+    return results
+
+
 class LabelUpdate(BaseModel):
     """Request body for the legacy ``PATCH /sessions/{id}/label`` route."""
 

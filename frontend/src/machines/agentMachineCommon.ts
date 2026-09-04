@@ -25,6 +25,11 @@ export interface AgentMachineContext {
   currentPosition: Position;
   targetPosition: Position;
   conversationStep: number;
+  // Chat scene (set by CHAT_START)
+  chatSpot: Position | null;
+  chatText: string;
+  chatSpeaker: boolean;
+  chatStartedAt: number;
 }
 
 export type AgentMachineEvent =
@@ -70,7 +75,11 @@ export type AgentMachineEvent =
   | { type: "ARRIVED_AT_DESK" }
   | { type: "ARRIVED_AT_ELEVATOR" }
   | { type: "ELEVATOR_TIMEOUT" }
-  | { type: "ELEVATOR_DOOR_CLOSING" };
+  | { type: "ELEVATOR_DOOR_CLOSING" }
+  | { type: "ARRIVED_AT_SPOT" }
+  | { type: "RETURN_TO_DESK" }
+  | { type: "CHAT_START"; spot: Position; text: string; speaker: boolean }
+  | { type: "CHAT_END" };
 
 // ============================================================================
 // EXTERNAL ACTION INTERFACE
@@ -101,6 +110,8 @@ export interface AgentMachineActions {
   onOpenElevator: () => void;
   onCloseElevator: () => void;
   onAgentRemoved: (agentId: string) => void;
+  /** Whether the agent is quiet enough (and allowed) to stroll around its room. */
+  canWander: (agentId: string) => boolean;
 }
 
 // ============================================================================
@@ -281,6 +292,31 @@ export function buildSharedActions(actions: AgentMachineActions) {
         "to_elevator",
       );
     },
+    startWalkingToWanderSpot: ({
+      context,
+    }: {
+      context: AgentMachineContext;
+    }) => {
+      actions.onStartWalking(
+        context.agentId,
+        context.currentPosition,
+        "to_wander_spot",
+      );
+    },
+    startWalkingToChatSpot: ({ context }: { context: AgentMachineContext }) => {
+      actions.onStartWalking(
+        context.agentId,
+        context.chatSpot ?? context.currentPosition,
+        "to_chat_spot",
+      );
+    },
+    showChatBubble: ({ context }: { context: AgentMachineContext }) => {
+      if (context.chatSpeaker && context.chatText) {
+        actions.onShowAgentBubble(context.agentId, context.chatText, "💬");
+      } else {
+        actions.onShowAgentBubble(context.agentId, "...", "👂");
+      }
+    },
 
     // Queue actions
     joinQueue: ({ context }: { context: AgentMachineContext }) => {
@@ -393,7 +429,13 @@ export const sharedGuards = {
     context.queueType === "arrival",
   isDeparture: ({ context }: { context: AgentMachineContext }) =>
     context.queueType === "departure",
+  wantsAnotherStroll: () => Math.random() < 0.5,
+  // Let a chat play out for a moment even if the backend clears it at once.
+  chatMinimumElapsed: ({ context }: { context: AgentMachineContext }) =>
+    Date.now() - context.chatStartedAt >= MIN_CHAT_MS,
 };
+
+const MIN_CHAT_MS = 4_000;
 
 // ============================================================================
 // SHARED DELAYS
@@ -408,6 +450,13 @@ export const sharedDelays = {
   // the case where the bubble is suppressed (boss completing / persistent)
   // and the BUBBLE_DISPLAYED event is never delivered.
   CONVERSATION_TIMEOUT: 5000,
+  // Idle strolling: wait a randomised while at the desk before wandering, and
+  // linger briefly at each spot so the walk reads as a stretch, not a twitch.
+  WANDER_DELAY: () => 20_000 + Math.random() * 25_000,
+  WANDER_PAUSE: () => 2_000 + Math.random() * 2_500,
+  // Chats last long enough to read the bubble, scaled by message length.
+  CHAT_DURATION: ({ context }: { context: AgentMachineContext }) =>
+    Math.min(24_000, Math.max(10_000, 4_000 + context.chatText.length * 60)),
 } as const;
 
 // ============================================================================
@@ -423,4 +472,8 @@ export const defaultAgentContext: AgentMachineContext = {
   currentPosition: { x: 0, y: 0 },
   targetPosition: { x: 0, y: 0 },
   conversationStep: 0,
+  chatSpot: null,
+  chatText: "",
+  chatSpeaker: false,
+  chatStartedAt: 0,
 };

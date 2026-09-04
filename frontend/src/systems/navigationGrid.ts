@@ -7,6 +7,12 @@
 
 import { Position } from "@/types";
 import { ELEVATOR_ZONE } from "./queuePositions";
+import {
+  DOOR_TILE_RECTS,
+  MEETING_TABLE,
+  WALL_TILE_RECTS,
+  type TileRect,
+} from "./officeRooms";
 
 // Grid configuration
 export const TILE_SIZE = 32;
@@ -192,6 +198,24 @@ export class NavigationGrid {
       TRASH_CAN_Y + TRASH_CAN_HALF_HEIGHT,
       TileType.WALL, // Use WALL type for impassable
     );
+
+    // Room partitions and the meeting table block; doors punch through the
+    // bottom wall so each room is reachable from the corridor.
+    for (const wall of WALL_TILE_RECTS) {
+      this.markTileRect(wall, TileType.WALL);
+    }
+    for (const door of DOOR_TILE_RECTS) {
+      this.markTileRect(door, TileType.FLOOR);
+    }
+    this.markTileRect(MEETING_TABLE.block, TileType.WALL);
+  }
+
+  private markTileRect(rect: TileRect, type: TileType): void {
+    for (let gx = rect.gx1; gx <= rect.gx2; gx++) {
+      for (let gy = rect.gy1; gy <= rect.gy2; gy++) {
+        this.setTile(gx, gy, type);
+      }
+    }
   }
 
   /**

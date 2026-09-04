@@ -20,6 +20,7 @@
  */
 
 import { setup, assign, type ActorRefFrom } from "xstate";
+import type { Position } from "@/types";
 import {
   buildSharedActions,
   sharedGuards,
@@ -40,6 +41,12 @@ export type {
 // ============================================================================
 // MACHINE DEFINITION
 // ============================================================================
+
+interface ChatParams {
+  spot: Position;
+  text: string;
+  speaker: boolean;
+}
 
 export const createAgentMachine = (actions: AgentMachineActions) =>
   setup({
@@ -69,8 +76,19 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
       resetConversationStep: assign({
         conversationStep: 0,
       }),
+      setChat: assign({
+        chatSpot: (_, params: ChatParams) => params.spot,
+        chatText: (_, params: ChatParams) => params.text,
+        chatSpeaker: (_, params: ChatParams) => params.speaker,
+      }),
+      markChatStarted: assign({
+        chatStartedAt: () => Date.now(),
+      }),
     },
-    guards: sharedGuards,
+    guards: {
+      ...sharedGuards,
+      canWander: ({ context }) => actions.canWander(context.agentId),
+    },
     delays: sharedDelays,
   }).createMachine({
     id: "agent",
@@ -86,14 +104,110 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
       },
 
       // ======================================================================
-      // IDLE — Agent is at their desk working
+      // IDLE — Agent is at their desk working, with occasional strolls around
+      // its room while nothing is happening
       // ======================================================================
       idle: {
-        entry: [{ type: "notifyPhaseChange", params: { phase: "idle" } }],
+        initial: "at_desk",
         on: {
           REMOVE: {
             target: "departure.departing",
             actions: ["setQueueTypeDeparture"],
+          },
+          // A chat pre-empts sitting and strolling alike.
+          CHAT_START: {
+            target: ".walking_to_chat",
+            actions: [
+              {
+                type: "setChat",
+                params: ({ event }) => ({
+                  spot: event.spot,
+                  text: event.text,
+                  speaker: event.speaker,
+                }),
+              },
+            ],
+          },
+        },
+        states: {
+          at_desk: {
+            entry: [{ type: "notifyPhaseChange", params: { phase: "idle" } }],
+            after: {
+              WANDER_DELAY: [
+                { target: "wandering", guard: "canWander" },
+                // Re-enter to re-arm the timer and check again later.
+                { target: "at_desk", reenter: true },
+              ],
+            },
+          },
+
+          wandering: {
+            entry: [
+              { type: "notifyPhaseChange", params: { phase: "wandering" } },
+              "startWalkingToWanderSpot",
+            ],
+            on: {
+              ARRIVED_AT_SPOT: "pausing",
+              RETURN_TO_DESK: "returning_to_desk",
+            },
+          },
+
+          pausing: {
+            after: {
+              WANDER_PAUSE: [
+                { target: "wandering", guard: "wantsAnotherStroll" },
+                { target: "returning_to_desk" },
+              ],
+            },
+            on: {
+              RETURN_TO_DESK: "returning_to_desk",
+            },
+          },
+
+          returning_to_desk: {
+            entry: [
+              {
+                type: "notifyPhaseChange",
+                params: { phase: "returning_to_desk" },
+              },
+              "startWalkingToDesk",
+            ],
+            on: {
+              ARRIVED_AT_DESK: "at_desk",
+            },
+          },
+
+          // Chat scene: walk to the spot, talk (or listen), then head back.
+          // CHAT_END is ignored until the agent has arrived so the scene
+          // always plays out visibly.
+          walking_to_chat: {
+            entry: [
+              {
+                type: "notifyPhaseChange",
+                params: { phase: "walking_to_chat" },
+              },
+              "startWalkingToChatSpot",
+            ],
+            on: {
+              ARRIVED_AT_SPOT: "chatting",
+            },
+          },
+
+          chatting: {
+            entry: [
+              { type: "notifyPhaseChange", params: { phase: "chatting" } },
+              "markChatStarted",
+              "showChatBubble",
+            ],
+            after: {
+              CHAT_DURATION: "returning_to_desk",
+            },
+            on: {
+              CHAT_END: {
+                target: "returning_to_desk",
+                guard: "chatMinimumElapsed",
+              },
+            },
           },
         },
       },

@@ -18,6 +18,7 @@ import { useWebSocketEvents } from "@/hooks/useWebSocketEvents";
 import { useSessions } from "@/hooks/useSessions";
 import { useSessionSwitch } from "@/hooks/useSessionSwitch";
 import { useFloorConfig } from "@/hooks/useFloorConfig";
+import { useRoomConfig } from "@/hooks/useRoomConfig";
 import {
   useGameStore,
   selectIsConnected,
@@ -39,6 +40,7 @@ import {
 } from "@/components/layout/StatusToast";
 import Modal from "@/components/overlay/Modal";
 import SettingsModal from "@/components/overlay/SettingsModal";
+import { SearchHistoryModal } from "@/components/overlay/SearchHistoryModal";
 import { Breadcrumb } from "@/components/navigation/Breadcrumb";
 import { ViewTransition } from "@/components/navigation/ViewTransition";
 import { BuildingView } from "@/components/views/BuildingView";
@@ -49,6 +51,7 @@ import { TourOverlay } from "@/components/tour/TourOverlay";
 import CommandBar from "@/components/attention/CommandBar";
 import AttentionToasts from "@/components/attention/AttentionToasts";
 import AgentPopup from "@/components/attention/AgentPopup";
+import { ReplayControls } from "@/components/layout/ReplayControls";
 import { useAttentionStore } from "@/stores/attentionStore";
 import { usePreferencesStore } from "@/stores/preferencesStore";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -176,6 +179,7 @@ export default function V2TestPage(): React.ReactNode {
   // Floor config + tour initialization
   // ------------------------------------------------------------------
   useFloorConfig();
+  useRoomConfig();
 
   // Watch for edit-building requests from BuildingView. Subscribe to the
   // store so the modal-opening setState runs in an event callback (the store
@@ -362,6 +366,12 @@ export default function V2TestPage(): React.ReactNode {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         initialTab={settingsInitialTab}
+      />
+
+      <SearchHistoryModal
+        isOpen={useAttentionStore((s) => s.isSearchModalOpen)}
+        onClose={() => useAttentionStore.getState().closeSearchModal()}
+        onSessionSelect={handleSessionSelect}
       />
 
       <Modal
@@ -587,6 +597,7 @@ export default function V2TestPage(): React.ReactNode {
       <CommandBar />
       <AttentionToasts />
       <AgentPopup />
+      <ReplayControls />
 
       {/* ----------------------------------------------------------------
           Tour Overlay

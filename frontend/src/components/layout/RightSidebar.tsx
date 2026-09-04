@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AgentStatus } from "@/components/game/AgentStatus";
 import { EventLog } from "@/components/layout/EventLog";
 import { ConversationHistory } from "@/components/layout/ConversationHistory";
+import { IssuesPanel } from "@/components/layout/IssuesPanel";
+import { NotesPanel } from "@/components/layout/NotesPanel";
 import { useDragResize } from "@/hooks/useDragResize";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useStuckAgentWatch } from "@/hooks/useStuckAgentWatch";
+import { useIssuesStore, selectOpenCount } from "@/stores/issuesStore";
 
 // ============================================================================
 // CONSTANTS
@@ -31,8 +35,24 @@ const getMaxPanelHeight = () => Math.floor(window.innerHeight * 0.7);
  */
 export function RightSidebar(): React.ReactNode {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"events" | "conversation">(
-    "events",
+  const [activeTab, setActiveTab] = useState<
+    "events" | "conversation" | "issues" | "notes"
+  >("events");
+  const openIssueCount = useIssuesStore(selectOpenCount);
+  useStuckAgentWatch();
+
+  // A new critical issue pulls the Issues tab forward so it cannot be missed.
+  useEffect(
+    () =>
+      useIssuesStore.subscribe((state, previous) => {
+        if (
+          state.lastCriticalAt !== null &&
+          state.lastCriticalAt !== previous.lastCriticalAt
+        ) {
+          setActiveTab("issues");
+        }
+      }),
+    [],
   );
 
   const {
@@ -108,7 +128,7 @@ export function RightSidebar(): React.ReactNode {
           </button>
           <button
             onClick={() => setActiveTab("conversation")}
-            className={`flex-1 px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors rounded-tr-lg ${
+            className={`flex-1 px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
               activeTab === "conversation"
                 ? "text-cyan-400 border-b-2 border-cyan-500 bg-slate-950/50"
                 : "text-slate-500 hover:text-slate-300"
@@ -116,11 +136,47 @@ export function RightSidebar(): React.ReactNode {
           >
             {t("sidebar.conversation")}
           </button>
+          <button
+            onClick={() => setActiveTab("issues")}
+            data-tour-id="issues-tab"
+            className={`flex-1 px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 ${
+              activeTab === "issues"
+                ? "text-red-400 border-b-2 border-red-500 bg-slate-950/50"
+                : openIssueCount > 0
+                  ? "text-red-400/80 hover:text-red-300"
+                  : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {t("sidebar.issues")}
+            {openIssueCount > 0 && (
+              <span className="min-w-[16px] px-1 rounded-full bg-red-600 text-white text-[9px] leading-4 text-center">
+                {openIssueCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("notes")}
+            className={`flex-1 px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors rounded-tr-lg ${
+              activeTab === "notes"
+                ? "text-amber-400 border-b-2 border-amber-500 bg-slate-950/50"
+                : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {t("sidebar.notes")}
+          </button>
         </div>
 
         {/* Tab content */}
         <div className="flex-grow min-h-0">
-          {activeTab === "events" ? <EventLog /> : <ConversationHistory />}
+          {activeTab === "events" ? (
+            <EventLog />
+          ) : activeTab === "conversation" ? (
+            <ConversationHistory />
+          ) : activeTab === "issues" ? (
+            <IssuesPanel />
+          ) : (
+            <NotesPanel />
+          )}
         </div>
       </div>
     </aside>

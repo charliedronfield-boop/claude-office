@@ -18,6 +18,9 @@
  * 9: Coffee (coffee cup tracker)
  * 10: Heat Map (file edit frequency) - click to reach from mode 9
  * 11: Kanban Board (task tracking with TODO/IN PROGRESS/DONE columns)
+ * 12: Pipeline Board (rooms as production stages, who's where) - hotkey P
+ * 13: Artifacts (recent Write/Edit file paths, newest first) - hotkey A
+ * 14: Room Stats (pass/fail tool-call counts per room) - hotkey S
  */
 
 import { Graphics } from "pixi.js";
@@ -36,7 +39,11 @@ import { NewsTickerMode } from "./whiteboard/NewsTickerMode";
 import { CoffeeMode } from "./whiteboard/CoffeeMode";
 import { HeatMapMode } from "./whiteboard/HeatMapMode";
 import { KanbanMode } from "./whiteboard/KanbanMode";
-import { MODE_INFO } from "./whiteboard/WhiteboardModeRegistry";
+import { PipelineMode } from "./whiteboard/PipelineMode";
+import { ArtifactsMode } from "./whiteboard/ArtifactsMode";
+import { RoomStatsMode } from "./whiteboard/RoomStatsMode";
+import { MODE_INFO, WHITEBOARD_MODE_COUNT } from "./whiteboard/WhiteboardModeRegistry";
+import { useArtifactStore } from "@/stores/artifactStore";
 
 // ============================================================================
 // WHITEBOARD FRAME
@@ -113,10 +120,10 @@ function WhiteboardFrame({
 
       {/* Mode indicator dots */}
       <pixiContainer x={165} y={193}>
-        {Array.from({ length: 12 }).map((_, i) => (
+        {Array.from({ length: WHITEBOARD_MODE_COUNT }).map((_, i) => (
           <pixiGraphics
             key={i}
-            x={(i - 5.5) * 10}
+            x={(i - (WHITEBOARD_MODE_COUNT - 1) / 2) * 10}
             draw={(g: Graphics) => {
               g.clear();
               g.circle(0, 0, i === mode ? 4 : 2);
@@ -147,6 +154,7 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
   const setMode = useGameStore((s) => s.setWhiteboardMode);
   const agentsMap = useGameStore((s) => s.agents);
   const bossTask = useGameStore((s) => s.boss.currentTask);
+  const artifacts = useArtifactStore((s) => s.artifacts);
 
   // Keyboard hotkeys: T = Todo List (0), B = Background Tasks (1), 0-9 = modes
   useEffect(() => {
@@ -177,6 +185,15 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
           break;
         case "k":
           setMode(11);
+          break;
+        case "p":
+          setMode(12);
+          break;
+        case "a":
+          setMode(13);
+          break;
+        case "s":
+          setMode(14);
           break;
       }
     };
@@ -232,6 +249,12 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
         return <HeatMapMode data={whiteboardData} />;
       case 11:
         return <KanbanMode data={whiteboardData} />;
+      case 12:
+        return <PipelineMode agents={agentList} />;
+      case 13:
+        return <ArtifactsMode artifacts={artifacts} />;
+      case 14:
+        return <RoomStatsMode />;
       default:
         return <TodoListMode todos={todos} />;
     }

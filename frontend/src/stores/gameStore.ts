@@ -89,6 +89,8 @@ export interface GameStore {
       backendState: BackendAgentState;
       name: string | null;
       currentTask: string | null;
+      nativeId?: string | null;
+      activeChat?: BackendAgent["activeChat"];
     },
   ) => void;
   updateAgentQueueInfo: (
@@ -97,6 +99,7 @@ export interface GameStore {
     queueIndex: number,
   ) => void;
   setAgentTyping: (agentId: string, typing: boolean) => void;
+  touchAgentActivity: (agentId: string) => void;
   applyAgentMovements: (movements: AgentMovement[]) => void;
 
   // ========== Queue State ==========

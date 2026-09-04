@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 from app.models.agents import (  # noqa: E402  # type: ignore[import]
     Agent,
     Boss,
+    ChatInfo,
     OfficeState,
 )
 from app.models.common import (  # noqa: E402  # type: ignore[import]
@@ -27,6 +28,7 @@ from app.models.common import (  # noqa: E402  # type: ignore[import]
 )
 from app.models.events import (  # noqa: E402  # type: ignore[import]
     AgentEventData,
+    AgentMessageEventData,
     BackgroundTaskEventData,
     Event,
     EventData,
@@ -62,6 +64,7 @@ from pydantic.json_schema import models_json_schema  # noqa: E402
 MODELS = [
     Agent,
     Boss,
+    ChatInfo,
     OfficeState,
     BubbleContent,
     SpeechContent,
@@ -84,6 +87,7 @@ MODELS = [
     LifecycleEventData,
     TaskEventData,
     BackgroundTaskEventData,
+    AgentMessageEventData,
     AgentLifespan,
     BackgroundTask,
     FileEdit,
