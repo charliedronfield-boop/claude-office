@@ -669,6 +669,7 @@ class EventProcessor:
             if beads:
                 await beads.stop_polling(event.session_id)
             self._beads_sessions.discard(event.session_id)
+            self._notify_session_digest(sm, session_id=event.session_id)
 
         # ------------------------------------------------------------------
         # Default state broadcast + history event notification
@@ -996,15 +997,13 @@ class EventProcessor:
             async with self._sessions_lock:
                 self.sessions[session_id] = sm
 
-    def _notify_critical_issue(self, message: str, *, session_id: str) -> None:
-        """Fire-and-forget POST of *message* to Settings.CRITICAL_ISSUE_WEBHOOK_URL.
+    def _post_webhook(self, url: str, message: str, *, session_id: str, label: str) -> None:
+        """Fire-and-forget POST of *message* to *url*, no-op when *url* is empty.
 
-        No-op when the setting is empty (the default). Scheduled as a
-        background task rather than awaited: a slow or unreachable webhook
-        must never add latency to event processing, and any failure is
-        logged, not raised.
+        Scheduled as a background task rather than awaited: a slow or
+        unreachable webhook must never add latency to event processing, and
+        any failure is logged (tagged with *label*), not raised.
         """
-        url = get_settings().CRITICAL_ISSUE_WEBHOOK_URL
         if not url:
             return
 
@@ -1013,9 +1012,53 @@ class EventProcessor:
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     await client.post(url, json={"text": message, "sessionId": session_id})
             except Exception:
-                logger.warning("Critical-issue webhook POST failed", exc_info=True)
+                logger.warning("%s webhook POST failed", label, exc_info=True)
 
         asyncio.create_task(_post())
+
+    def _notify_critical_issue(self, message: str, *, session_id: str) -> None:
+        """Fire-and-forget POST of *message* to Settings.CRITICAL_ISSUE_WEBHOOK_URL.
+
+        No-op when the setting is empty (the default).
+        """
+        self._post_webhook(
+            get_settings().CRITICAL_ISSUE_WEBHOOK_URL,
+            message,
+            session_id=session_id,
+            label="Critical-issue",
+        )
+
+    def _notify_session_digest(self, sm: StateMachine, *, session_id: str) -> None:
+        """Fire-and-forget POST of a plain-language shift summary at session end.
+
+        No-op when Settings.SESSION_DIGEST_WEBHOOK_URL is empty (the
+        default). Deliberately a deterministic tally over sm.history rather
+        than an LLM summary — no extra latency/cost on the session-end path,
+        and nothing to get subtly wrong.
+        """
+        url = get_settings().SESSION_DIGEST_WEBHOOK_URL
+        if not url:
+            return
+
+        tool_calls = 0
+        failed_calls = 0
+        chats = 0
+        for entry in sm.history:
+            if entry["type"] == "post_tool_use":
+                tool_calls += 1
+                if entry["detail"].get("success") is False:
+                    failed_calls += 1
+            elif entry["type"] == "agent_message":
+                chats += 1
+
+        parts = [f"🏁 Session wrapped: {len(sm.agents)} agent(s), {tool_calls} tool call(s)"]
+        if failed_calls:
+            parts.append(f"{failed_calls} failed")
+        if chats:
+            parts.append(f"{chats} chat(s)")
+        message = ", ".join(parts)
+
+        self._post_webhook(url, message, session_id=session_id, label="Session-digest")
 
     async def _note_agent_message(self, sm: StateMachine, event: AgentMessageEvent) -> None:
         """Append a real inter-agent chat to whichever agent's room it happened in."""

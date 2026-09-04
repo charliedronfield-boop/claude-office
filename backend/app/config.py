@@ -131,6 +131,14 @@ class Settings(BaseSettings):
     # processing (see event_processor._notify_critical_issue).
     CRITICAL_ISSUE_WEBHOOK_URL: str = ""
 
+    # Optional webhook POSTed a short plain-language summary when a session
+    # ends: tool calls made/failed, agents spawned, chats exchanged. Separate
+    # from CRITICAL_ISSUE_WEBHOOK_URL so routine end-of-shift digests don't
+    # have to share a channel with urgent alerts. Off (empty) by default;
+    # same fire-and-forget/best-effort semantics (see
+    # event_processor._notify_session_digest).
+    SESSION_DIGEST_WEBHOOK_URL: str = ""
+
     @property
     def effective_api_key(self) -> str:
         """Return the configured API key, or the per-launch auto-generated token."""

@@ -166,6 +166,7 @@ Configuration is managed via environment variables or a `.env` file in the backe
 | `BACKEND_CORS_ORIGINS` | localhost origins | Allowed CORS origins (localhost only by default) |
 | `CLAUDE_OFFICE_ALLOW_LAN_VIEW` | `False` | Set to `true` to allow read-only viewing from other devices on your local network |
 | `CRITICAL_ISSUE_WEBHOOK_URL` | (empty) | POSTs `{"text": "...", "sessionId": "..."}` to this URL (e.g. a Slack incoming webhook or [ntfy.sh](https://ntfy.sh) topic) whenever a permission is denied by auto mode, a turn ends in an API/turn error, or a subagent needs a permission decision. Best-effort — a slow/failed webhook never affects event processing. |
+| `SESSION_DIGEST_WEBHOOK_URL` | (empty) | Same `{"text": "...", "sessionId": "..."}` shape, POSTed once when a session ends: a deterministic tally of tool calls made/failed, agents spawned, and chats exchanged. Separate from `CRITICAL_ISSUE_WEBHOOK_URL` so routine end-of-shift digests don't share a channel with urgent alerts. |
 
 ### Docker Path Translation
 
