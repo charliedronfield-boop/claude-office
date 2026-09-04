@@ -40,6 +40,7 @@ import {
 } from "@/components/layout/StatusToast";
 import Modal from "@/components/overlay/Modal";
 import SettingsModal from "@/components/overlay/SettingsModal";
+import { SearchHistoryModal } from "@/components/overlay/SearchHistoryModal";
 import { Breadcrumb } from "@/components/navigation/Breadcrumb";
 import { ViewTransition } from "@/components/navigation/ViewTransition";
 import { BuildingView } from "@/components/views/BuildingView";
@@ -365,6 +366,12 @@ export default function V2TestPage(): React.ReactNode {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         initialTab={settingsInitialTab}
+      />
+
+      <SearchHistoryModal
+        isOpen={useAttentionStore((s) => s.isSearchModalOpen)}
+        onClose={() => useAttentionStore.getState().closeSearchModal()}
+        onSessionSelect={handleSessionSelect}
       />
 
       <Modal

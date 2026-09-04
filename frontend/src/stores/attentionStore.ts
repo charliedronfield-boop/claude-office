@@ -37,6 +37,8 @@ interface AttentionState {
   // Command bar
   isCommandBarOpen: boolean;
   commandFilter: string;
+  // Search history modal
+  isSearchModalOpen: boolean;
   // Focus popup
   focusPopup: FocusPopupState | null;
 
@@ -54,6 +56,8 @@ interface AttentionState {
   openCommandBar: () => void;
   closeCommandBar: () => void;
   setCommandFilter: (filter: string) => void;
+  openSearchModal: () => void;
+  closeSearchModal: () => void;
   openFocusPopup: (agentId: string, screenX: number, screenY: number) => void;
   closeFocusPopup: () => void;
   focusAgentTerminal: (
@@ -111,6 +115,7 @@ export const useAttentionStore = create<AttentionState>()((set, get) => ({
   toastQueue: [],
   isCommandBarOpen: false,
   commandFilter: "",
+  isSearchModalOpen: false,
   focusPopup: null,
 
   processEvent: (event) => {
@@ -166,6 +171,8 @@ export const useAttentionStore = create<AttentionState>()((set, get) => ({
 
   openCommandBar: () => set({ isCommandBarOpen: true, commandFilter: "" }),
   closeCommandBar: () => set({ isCommandBarOpen: false, commandFilter: "" }),
+  openSearchModal: () => set({ isSearchModalOpen: true }),
+  closeSearchModal: () => set({ isSearchModalOpen: false }),
   setCommandFilter: (filter) => set({ commandFilter: filter }),
 
   openFocusPopup: (agentId, screenX, screenY) =>
