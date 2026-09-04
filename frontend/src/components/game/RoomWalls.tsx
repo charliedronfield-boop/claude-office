@@ -22,6 +22,8 @@ import {
 import { useRoomActivityStore } from "@/stores/roomActivityStore";
 import { formatCountdown, useScheduleStore } from "@/stores/scheduleStore";
 import { useRoomConfigStore } from "@/stores/roomConfigStore";
+import { useRoomStatsStore } from "@/stores/roomStatsStore";
+import { milestoneTier } from "@/systems/roomMilestones";
 
 interface RoomDisplay {
   name: string;
@@ -165,6 +167,7 @@ export function RoomWalls(): ReactNode {
   const display = useRoomDisplayMap();
   const drawRoomsCallback = useCallback((g: Graphics) => drawRooms(g, display), [display]);
   const toolCalls = useRoomActivityStore((s) => s.toolCalls);
+  const successCounts = useRoomStatsStore((s) => s.success);
   const schedule = useScheduleStore((s) => s.raw);
   const scheduleAt = useScheduleStore((s) => s.parsedAt);
 
@@ -213,6 +216,7 @@ export function RoomWalls(): ReactNode {
         const centerX = floor.x + floor.width / 2;
         const count = toolCalls[room.id] ?? 0;
         const roomDisplay = display.get(room.id) ?? { name: room.name, accent: room.accent };
+        const tier = milestoneTier(successCounts[room.id] ?? 0);
         return (
           <pixiContainer key={room.id} x={centerX} y={placardY}>
             <pixiGraphics draw={(g) => drawPlacard(g, roomDisplay.accent)} />
@@ -224,6 +228,15 @@ export function RoomWalls(): ReactNode {
                 resolution={2}
               />
             </pixiContainer>
+
+            {/* Milestone badge: a tier reward for a room's cumulative clean
+                tool-call count this session (see roomMilestones.ts) — reuses
+                roomStatsStore's Room Stats tally rather than a new signal. */}
+            {tier && (
+              <pixiContainer x={PLACARD_WIDTH / 2 - 12} y={4} scale={0.5}>
+                <pixiText text={tier} anchor={0.5} style={{ fontSize: 20 }} resolution={2} />
+              </pixiContainer>
+            )}
 
             {/* Activity badge: cumulative tool calls this session — a rough
                 "how much work has happened here" proxy (see roomActivityStore). */}
