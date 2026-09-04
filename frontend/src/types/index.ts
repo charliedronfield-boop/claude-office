@@ -92,7 +92,8 @@ export type WhiteboardMode =
   | 10 // Heat Map
   | 11 // Kanban Board — hotkey K
   | 12 // Pipeline Board (rooms as production stages) — hotkey P
-  | 13; // Artifacts (recent Write/Edit file paths) — hotkey A
+  | 13 // Artifacts (recent Write/Edit file paths) — hotkey A
+  | 14; // Room Stats (pass/fail per room) — hotkey S
 
 /**
  * Shape of the optional event detail payload carried in WebSocket events.

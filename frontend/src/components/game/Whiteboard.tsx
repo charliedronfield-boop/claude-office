@@ -20,6 +20,7 @@
  * 11: Kanban Board (task tracking with TODO/IN PROGRESS/DONE columns)
  * 12: Pipeline Board (rooms as production stages, who's where) - hotkey P
  * 13: Artifacts (recent Write/Edit file paths, newest first) - hotkey A
+ * 14: Room Stats (pass/fail tool-call counts per room) - hotkey S
  */
 
 import { Graphics } from "pixi.js";
@@ -40,6 +41,7 @@ import { HeatMapMode } from "./whiteboard/HeatMapMode";
 import { KanbanMode } from "./whiteboard/KanbanMode";
 import { PipelineMode } from "./whiteboard/PipelineMode";
 import { ArtifactsMode } from "./whiteboard/ArtifactsMode";
+import { RoomStatsMode } from "./whiteboard/RoomStatsMode";
 import { MODE_INFO, WHITEBOARD_MODE_COUNT } from "./whiteboard/WhiteboardModeRegistry";
 import { useArtifactStore } from "@/stores/artifactStore";
 
@@ -190,6 +192,9 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
         case "a":
           setMode(13);
           break;
+        case "s":
+          setMode(14);
+          break;
       }
     };
 
@@ -248,6 +253,8 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
         return <PipelineMode agents={agentList} />;
       case 13:
         return <ArtifactsMode artifacts={artifacts} />;
+      case 14:
+        return <RoomStatsMode />;
       default:
         return <TodoListMode todos={todos} />;
     }

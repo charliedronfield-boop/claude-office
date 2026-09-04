@@ -46,6 +46,8 @@ export type { PipelineModeProps } from "./PipelineMode";
 export { ArtifactsMode } from "./ArtifactsMode";
 export type { ArtifactsModeProps } from "./ArtifactsMode";
 
+export { RoomStatsMode } from "./RoomStatsMode";
+
 export {
   MODE_INFO,
   WHITEBOARD_MODE_COUNT,

@@ -31,6 +31,7 @@ import {
 } from "@/systems/issueClassifier";
 import { useIssuesStore } from "@/stores/issuesStore";
 import { useRoomActivityStore } from "@/stores/roomActivityStore";
+import { useRoomStatsStore } from "@/stores/roomStatsStore";
 import { extractSchedule, useScheduleStore } from "@/stores/scheduleStore";
 import { ARTIFACT_TOOLS, useArtifactStore } from "@/stores/artifactStore";
 import { getRoomForDesk } from "@/systems/officeRooms";
@@ -153,6 +154,7 @@ export function useWebSocketEvents({
                 resetSpawnIndex();
                 useIssuesStore.getState().reset();
                 useRoomActivityStore.getState().reset();
+                useRoomStatsStore.getState().reset();
                 useScheduleStore.getState().reset();
                 useArtifactStore.getState().reset();
               }
@@ -180,16 +182,16 @@ export function useWebSocketEvents({
               ) {
                 const agentId = message.event.agentId;
                 const typingKey = agentId || "boss";
+                const activityAgent = useGameStore
+                  .getState()
+                  .agents.get(issueActor.agentId ?? "");
+                const activityRoom = getRoomForDesk(
+                  activityAgent?.desk ?? null,
+                );
                 if (message.event.type === "pre_tool_use") {
                   typingTrackerRef.current?.onPreToolUse(typingKey);
                   // Per-room activity tally (RoomWalls placard subtitle) —
                   // count once per call, on pre_tool_use only.
-                  const activityAgent = useGameStore
-                    .getState()
-                    .agents.get(issueActor.agentId ?? "");
-                  const activityRoom = getRoomForDesk(
-                    activityAgent?.desk ?? null,
-                  );
                   if (activityRoom) {
                     useRoomActivityStore.getState().increment(activityRoom.id);
                   }
@@ -227,6 +229,16 @@ export function useWebSocketEvents({
                   }
                 } else {
                   typingTrackerRef.current?.onPostToolUse(typingKey);
+                  // Per-room pass/fail tally (Room Stats whiteboard mode) —
+                  // count once per call, on post_tool_use (once success is known).
+                  if (activityRoom) {
+                    useRoomStatsStore
+                      .getState()
+                      .recordResult(
+                        activityRoom.id,
+                        message.event.detail?.success !== false,
+                      );
+                  }
                 }
               }
 
@@ -358,6 +370,7 @@ export function resetFrontendState(): void {
 
   useIssuesStore.getState().reset();
   useRoomActivityStore.getState().reset();
+  useRoomStatsStore.getState().reset();
   useScheduleStore.getState().reset();
   useArtifactStore.getState().reset();
 }
