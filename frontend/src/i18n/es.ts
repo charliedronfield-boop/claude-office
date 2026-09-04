@@ -158,6 +158,8 @@ const es: Record<TranslationKey, string> = {
   "issues.openCount_one": "{count} abierto",
   "issues.openCount_other": "{count} abiertos",
   "issues.empty": "Sin problemas — la oficina funciona sin contratiempos.",
+  "issues.exportCsv": "Exportar como CSV",
+  "issues.exportMarkdown": "Exportar como Markdown",
   "issues.resolved": "Resueltos",
   "issues.whatHappened": "Qué pasó",
   "issues.suggestedFix": "Solución sugerida",

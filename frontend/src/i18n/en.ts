@@ -156,6 +156,8 @@ const en = {
   "issues.openCount_one": "{count} open",
   "issues.openCount_other": "{count} open",
   "issues.empty": "No problems — the office is running smoothly.",
+  "issues.exportCsv": "Export as CSV",
+  "issues.exportMarkdown": "Export as Markdown",
   "issues.resolved": "Resolved",
   "issues.whatHappened": "What happened",
   "issues.suggestedFix": "Suggested fix",

@@ -158,6 +158,8 @@ const ptBR: Record<TranslationKey, string> = {
   "issues.openCount_one": "{count} aberto",
   "issues.openCount_other": "{count} abertos",
   "issues.empty": "Sem problemas — o escritório está funcionando bem.",
+  "issues.exportCsv": "Exportar como CSV",
+  "issues.exportMarkdown": "Exportar como Markdown",
   "issues.resolved": "Resolvidos",
   "issues.whatHappened": "O que aconteceu",
   "issues.suggestedFix": "Correção sugerida",

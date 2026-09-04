@@ -11,7 +11,14 @@
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { format } from "date-fns";
-import { AlertTriangle, CheckCircle2, ShieldCheck, ShieldX } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  FileText,
+  ShieldCheck,
+  ShieldX,
+} from "lucide-react";
 import {
   useIssuesStore,
   selectOpenIssues,
@@ -25,14 +32,28 @@ import {
 } from "@/components/game/issueStyles";
 import { useTranslation } from "@/hooks/useTranslation";
 import { decidePermission } from "@/systems/permissionsApi";
+import { downloadTextFile, issuesToCSV, issuesToMarkdown } from "@/systems/issueExport";
 
 const MAX_RESOLVED_SHOWN = 20;
+
+function exportFilename(extension: string): string {
+  return `issues-${format(new Date(), "yyyy-MM-dd-HHmmss")}.${extension}`;
+}
 
 export function IssuesPanel() {
   const { t } = useTranslation();
   const openIssues = useIssuesStore(useShallow(selectOpenIssues));
   const resolvedIssues = useIssuesStore(useShallow(selectResolvedIssues));
   const [selected, setSelected] = useState<Issue | null>(null);
+
+  const handleExport = (format: "csv" | "md") => {
+    const all = useIssuesStore.getState().issues;
+    if (format === "csv") {
+      downloadTextFile(exportFilename("csv"), issuesToCSV(all), "text/csv");
+    } else {
+      downloadTextFile(exportFilename("md"), issuesToMarkdown(all), "text/markdown");
+    }
+  };
 
   return (
     <>
@@ -45,8 +66,28 @@ export function IssuesPanel() {
             />
             {t("issues.title")}
           </div>
-          <div className="text-slate-500">
-            {t("issues.openCount", { count: openIssues.length })}
+          <div className="flex items-center gap-2">
+            <div className="text-slate-500">
+              {t("issues.openCount", { count: openIssues.length })}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleExport("csv")}
+              title={t("issues.exportCsv")}
+              className="p-1 rounded text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors"
+            >
+              <Download size={12} />
+              <span className="sr-only">{t("issues.exportCsv")}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExport("md")}
+              title={t("issues.exportMarkdown")}
+              className="p-1 rounded text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors"
+            >
+              <FileText size={12} />
+              <span className="sr-only">{t("issues.exportMarkdown")}</span>
+            </button>
           </div>
         </div>
 
