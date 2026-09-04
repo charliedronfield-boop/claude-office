@@ -356,6 +356,7 @@ const ptBR: Record<TranslationKey, string> = {
   "settings.filterError": "Erros e paradas",
   "settings.filterTaskComplete": "Tarefas concluídas",
   "settings.filterArrival": "Chegadas de agentes",
+  "settings.criticalIssueAudio": "Tocar um som em problemas críticos",
 };
 
 export default ptBR;

@@ -35,6 +35,7 @@ import { useRoomStatsStore } from "@/stores/roomStatsStore";
 import { extractSchedule, useScheduleStore } from "@/stores/scheduleStore";
 import { ARTIFACT_TOOLS, useArtifactStore } from "@/stores/artifactStore";
 import { getRoomForDesk } from "@/systems/officeRooms";
+import { playCriticalIssueChime } from "@/systems/audioCues";
 import type { EventType, WebSocketMessage } from "@/types";
 
 /**
@@ -164,7 +165,16 @@ export function useWebSocketEvents({
               const issueActor = resolveIssueActor(message.event);
               const issue = classifyIssue(message.event, issueActor);
               if (issue) {
+                const prevCriticalAt = useIssuesStore.getState().lastCriticalAt;
                 useIssuesStore.getState().addIssue(issue);
+                // Only chime for a genuinely new critical issue — addIssue
+                // silently drops duplicates (lastCriticalAt stays unchanged).
+                if (
+                  useIssuesStore.getState().lastCriticalAt !== prevCriticalAt &&
+                  usePreferencesStore.getState().criticalIssueAudioEnabled
+                ) {
+                  playCriticalIssueChime();
+                }
               } else if (clearsWaitingIssues(message.event.type)) {
                 const sessionWide =
                   message.event.type === "stop" ||

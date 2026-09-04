@@ -354,6 +354,7 @@ const en = {
   "settings.filterError": "Errors and stops",
   "settings.filterTaskComplete": "Task completions",
   "settings.filterArrival": "Agent arrivals",
+  "settings.criticalIssueAudio": "Play a sound on critical issues",
 } as const;
 
 export type TranslationKey = keyof typeof en;

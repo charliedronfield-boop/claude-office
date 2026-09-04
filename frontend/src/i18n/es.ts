@@ -356,6 +356,7 @@ const es: Record<TranslationKey, string> = {
   "settings.filterError": "Errores y paradas",
   "settings.filterTaskComplete": "Tareas completadas",
   "settings.filterArrival": "Llegadas de agentes",
+  "settings.criticalIssueAudio": "Reproducir un sonido en problemas críticos",
 };
 
 export default es;

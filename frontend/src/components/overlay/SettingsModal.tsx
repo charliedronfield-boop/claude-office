@@ -126,6 +126,12 @@ export default function SettingsModal({
   const setToastFilterArrival = usePreferencesStore(
     (s) => s.setToastFilterArrival,
   );
+  const criticalIssueAudioEnabled = usePreferencesStore(
+    (s) => s.criticalIssueAudioEnabled,
+  );
+  const setCriticalIssueAudioEnabled = usePreferencesStore(
+    (s) => s.setCriticalIssueAudioEnabled,
+  );
 
   const { t } = useTranslation();
 
@@ -452,6 +458,13 @@ export default function SettingsModal({
                 label={t("settings.filterArrival")}
                 checked={toastFilterArrival}
                 onChange={() => setToastFilterArrival(!toastFilterArrival)}
+              />
+              <SettingsToggle
+                label={t("settings.criticalIssueAudio")}
+                checked={criticalIssueAudioEnabled}
+                onChange={() =>
+                  setCriticalIssueAudioEnabled(!criticalIssueAudioEnabled)
+                }
               />
             </div>
           </div>
