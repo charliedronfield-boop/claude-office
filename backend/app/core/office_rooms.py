@@ -111,12 +111,27 @@ class RoomOverride(BaseModel):
     keywords: list[str] | None = None
 
 
+class AgentTypeOverride(BaseModel):
+    """Pin one exact ``subagent_type`` string to a fixed room slot.
+
+    Checked before the keyword search in ``resolve_room`` — an escape hatch
+    for agent types that don't (or shouldn't) match any room's keywords,
+    e.g. spawning a generic ``general-purpose`` agent to do editing work.
+    """
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    agent_type: str
+    room_id: str
+
+
 class RoomConfigOverrides(BaseModel):
     """Top-level shape of the ``room_config`` preference value."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     rooms: list[RoomOverride] = Field(default_factory=lambda: [])
+    agent_type_overrides: list[AgentTypeOverride] = Field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, json_str: str) -> RoomConfigOverrides:
@@ -157,6 +172,7 @@ def _find(entries: list[RoomOverride], room_id: str) -> RoomOverride | None:
 # ---------------------------------------------------------------------------
 
 _cached_rooms: tuple[Room, ...] | None = None
+_cached_agent_type_pins: dict[str, str] | None = None
 
 
 def get_cached_rooms() -> tuple[Room, ...]:
@@ -164,10 +180,47 @@ def get_cached_rooms() -> tuple[Room, ...]:
     return _cached_rooms if _cached_rooms is not None else DEFAULT_ROOMS
 
 
+def get_cached_agent_type_pins() -> dict[str, str]:
+    """Return the cached ``agent_type`` (lowercased) -> ``room_id`` pin map."""
+    return _cached_agent_type_pins if _cached_agent_type_pins is not None else {}
+
+
 def invalidate_rooms_cache() -> None:
     """Clear the cached rooms so the next ``load_rooms`` call reloads them."""
-    global _cached_rooms
+    global _cached_rooms, _cached_agent_type_pins
     _cached_rooms = None
+    _cached_agent_type_pins = None
+
+
+async def load_room_config_overrides(db: Any) -> RoomConfigOverrides:
+    """Load the raw ``room_config`` override object (unapplied).
+
+    Used both by ``load_rooms`` (to populate the resolve-time caches) and by
+    the ``GET /rooms`` route (which needs the agent-type overrides' original
+    casing for display — the cached pin map is lowercased for matching).
+    Falls back to an empty overrides object on any error, mirroring the
+    previous ``load_rooms`` behaviour of silently defaulting.
+
+    Args:
+        db: Async database session.
+    """
+    from sqlalchemy import select
+
+    from app.db.models import UserPreference
+
+    try:
+        result = await db.execute(
+            select(UserPreference).where(UserPreference.key == ROOM_CONFIG_KEY)
+        )
+        pref = result.scalar_one_or_none()
+        if pref and pref.value:
+            return RoomConfigOverrides.from_json(pref.value)
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.warning("Invalid room_config preference, using default: %s", exc)
+    except Exception:
+        logger.exception("Error loading room_config")
+
+    return RoomConfigOverrides()
 
 
 async def load_rooms(db: Any) -> tuple[Room, ...]:
@@ -182,26 +235,15 @@ async def load_rooms(db: Any) -> tuple[Room, ...]:
     Returns:
         The resolved (default + override) room tuple.
     """
-    from sqlalchemy import select
+    global _cached_rooms, _cached_agent_type_pins
 
-    from app.db.models import UserPreference
-
-    global _cached_rooms
-    try:
-        result = await db.execute(
-            select(UserPreference).where(UserPreference.key == ROOM_CONFIG_KEY)
-        )
-        pref = result.scalar_one_or_none()
-        if pref and pref.value:
-            overrides = RoomConfigOverrides.from_json(pref.value)
-            _cached_rooms = apply_overrides(overrides)
-            return _cached_rooms
-    except (json.JSONDecodeError, ValueError) as exc:
-        logger.warning("Invalid room_config preference, using default: %s", exc)
-    except Exception:
-        logger.exception("Error loading room_config")
-
-    _cached_rooms = DEFAULT_ROOMS
+    overrides = await load_room_config_overrides(db)
+    _cached_rooms = apply_overrides(overrides)
+    _cached_agent_type_pins = {
+        entry.agent_type.strip().lower(): entry.room_id
+        for entry in overrides.agent_type_overrides
+        if entry.agent_type.strip()
+    }
     return _cached_rooms
 
 
@@ -228,11 +270,21 @@ def resolve_room(
     agent_type: str | None,
     used_desks: Iterable[int] = (),
     rooms: tuple[Room, ...] | None = None,
+    agent_type_pins: dict[str, str] | None = None,
 ) -> str:
-    """Return the room id for an agent type, falling back to the emptiest room."""
+    """Return the room id for an agent type, falling back to the emptiest room.
+
+    Resolution order: an exact ``agent_type_pins`` match wins outright (a
+    user-configured escape hatch for types that shouldn't be keyword-routed),
+    then the keyword search, then the emptiest room.
+    """
     active_rooms = rooms if rooms is not None else get_cached_rooms()
-    needle = (agent_type or "").lower()
+    pins = agent_type_pins if agent_type_pins is not None else get_cached_agent_type_pins()
+    needle = (agent_type or "").strip().lower()
     if needle:
+        pinned_room_id = pins.get(needle)
+        if pinned_room_id is not None and any(room.id == pinned_room_id for room in active_rooms):
+            return pinned_room_id
         for room in active_rooms:
             if any(keyword in needle for keyword in room.keywords):
                 return room.id

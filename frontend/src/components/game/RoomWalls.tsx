@@ -16,10 +16,33 @@ import {
   ROOM_TOP_GY,
   TILE_PX,
   WALL_TILE_RECTS,
+  parseHexColor,
   tileRectToPixels,
 } from "@/systems/officeRooms";
 import { useRoomActivityStore } from "@/stores/roomActivityStore";
 import { formatCountdown, useScheduleStore } from "@/stores/scheduleStore";
+import { useRoomConfigStore } from "@/stores/roomConfigStore";
+
+interface RoomDisplay {
+  name: string;
+  accent: number;
+}
+
+/** Live name/accent per room id, falling back to the static defaults until
+ * useRoomConfig's fetch lands (or if it fails/returns a malformed accent). */
+function useRoomDisplayMap(): ReadonlyMap<string, RoomDisplay> {
+  const liveRooms = useRoomConfigStore((s) => s.rooms);
+  return useMemo(() => {
+    const overrides = new Map(liveRooms.map((r) => [r.id, r]));
+    return new Map(
+      ROOMS.map((room) => {
+        const live = overrides.get(room.id);
+        const accent = live ? (parseHexColor(live.accent) ?? room.accent) : room.accent;
+        return [room.id, { name: live?.name ?? room.name, accent }];
+      }),
+    );
+  }, [liveRooms]);
+}
 
 const WALL_COLOR = 0x3d3d3d;
 const WALL_TRIM_COLOR = 0x4a4a4a;
@@ -34,13 +57,13 @@ const ROOM_TINT_ALPHA = 0.07;
 const PLACARD_WIDTH = 132;
 const PLACARD_HEIGHT = 20;
 
-function drawRooms(g: Graphics): void {
+function drawRooms(g: Graphics, display: ReadonlyMap<string, RoomDisplay>): void {
   g.clear();
 
   for (const room of ROOMS) {
     const floor = tileRectToPixels(room.interior);
     g.rect(floor.x, floor.y, floor.width, floor.height);
-    g.fill({ color: room.accent, alpha: ROOM_TINT_ALPHA });
+    g.fill({ color: display.get(room.id)?.accent ?? room.accent, alpha: ROOM_TINT_ALPHA });
   }
 
   g.rect(
@@ -139,7 +162,8 @@ function drawScheduleBadge(g: Graphics, width: number): void {
 }
 
 export function RoomWalls(): ReactNode {
-  const drawRoomsCallback = useCallback((g: Graphics) => drawRooms(g), []);
+  const display = useRoomDisplayMap();
+  const drawRoomsCallback = useCallback((g: Graphics) => drawRooms(g, display), [display]);
   const toolCalls = useRoomActivityStore((s) => s.toolCalls);
   const schedule = useScheduleStore((s) => s.raw);
   const scheduleAt = useScheduleStore((s) => s.parsedAt);
@@ -188,12 +212,13 @@ export function RoomWalls(): ReactNode {
         const floor = tileRectToPixels(room.interior);
         const centerX = floor.x + floor.width / 2;
         const count = toolCalls[room.id] ?? 0;
+        const roomDisplay = display.get(room.id) ?? { name: room.name, accent: room.accent };
         return (
           <pixiContainer key={room.id} x={centerX} y={placardY}>
-            <pixiGraphics draw={(g) => drawPlacard(g, room.accent)} />
+            <pixiGraphics draw={(g) => drawPlacard(g, roomDisplay.accent)} />
             <pixiContainer x={0} y={PLACARD_HEIGHT / 2} scale={0.5}>
               <pixiText
-                text={room.name.toUpperCase()}
+                text={roomDisplay.name.toUpperCase()}
                 anchor={0.5}
                 style={labelStyle}
                 resolution={2}

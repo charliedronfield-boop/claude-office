@@ -10,17 +10,18 @@ import {
 import { useTranslation } from "@/hooks/useTranslation";
 import { locales, type Locale } from "@/i18n";
 import { BuildingTab } from "@/components/settings/BuildingTab";
+import { RoomsTab } from "@/components/settings/RoomsTab";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-type SettingsTab = "general" | "building";
+type SettingsTab = "general" | "building" | "rooms";
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: "general" | "building";
+  initialTab?: "general" | "building" | "rooms";
 }
 
 // ============================================================================
@@ -78,6 +79,7 @@ export default function SettingsModal({
 }: SettingsModalProps): ReactNode {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [buildingDirty, setBuildingDirty] = useState(false);
+  const [roomsDirty, setRoomsDirty] = useState(false);
 
   // Sync tab when initialTab changes (e.g. edit-building request).
   useEffect(() => {
@@ -127,8 +129,12 @@ export default function SettingsModal({
 
   const { t } = useTranslation();
 
-  const handleDirtyChange = useCallback((dirty: boolean) => {
+  const handleBuildingDirtyChange = useCallback((dirty: boolean) => {
     setBuildingDirty(dirty);
+  }, []);
+
+  const handleRoomsDirtyChange = useCallback((dirty: boolean) => {
+    setRoomsDirty(dirty);
   }, []);
 
   const handleTabSwitch = (tab: SettingsTab) => {
@@ -137,6 +143,14 @@ export default function SettingsModal({
       tab !== "building" &&
       buildingDirty &&
       !window.confirm(t("settings.building.unsavedWarning"))
+    ) {
+      return;
+    }
+    if (
+      activeTab === "rooms" &&
+      tab !== "rooms" &&
+      roomsDirty &&
+      !window.confirm(t("settings.rooms.unsavedWarning"))
     ) {
       return;
     }
@@ -176,7 +190,7 @@ export default function SettingsModal({
     >
       {/* Tab bar */}
       <div className="flex gap-1 mb-6 p-1 bg-slate-800/50 rounded-lg border border-slate-700">
-        {(["general", "building"] as const).map((tab) => (
+        {(["general", "building", "rooms"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -188,7 +202,7 @@ export default function SettingsModal({
             }`}
           >
             {t(`settings.tabs.${tab}`)}
-            {tab === "building" && buildingDirty && (
+            {((tab === "building" && buildingDirty) || (tab === "rooms" && roomsDirty)) && (
               <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-amber-400 align-middle" />
             )}
           </button>
@@ -196,7 +210,9 @@ export default function SettingsModal({
       </div>
 
       {/* Tab content */}
-      {activeTab === "general" ? (
+      {activeTab === "rooms" ? (
+        <RoomsTab onDirtyChange={handleRoomsDirtyChange} />
+      ) : activeTab === "general" ? (
         <div className="space-y-6">
           {/* Language */}
           <div>
@@ -446,7 +462,7 @@ export default function SettingsModal({
           </div>
         </div>
       ) : (
-        <BuildingTab onDirtyChange={handleDirtyChange} />
+        <BuildingTab onDirtyChange={handleBuildingDirtyChange} />
       )}
     </Modal>
   );

@@ -101,6 +101,30 @@ const es: Record<TranslationKey, string> = {
   "settings.building.saveFailed": "Error al guardar: {status} {statusText}",
   "settings.building.saveUnreachable":
     "No se puede conectar con el servidor — ¿está en ejecución?",
+  "settings.tabs.rooms": "Salas",
+  "settings.rooms.hint":
+    "Renombra las cuatro salas de roles, cámbiales el color o cambia qué palabras clave de subagent_type dirigen a cada una.",
+  "settings.rooms.roomName": "Nombre de la Sala",
+  "settings.rooms.accentColor": "Color",
+  "settings.rooms.keywords": "Palabras clave de enrutamiento",
+  "settings.rooms.keywordsPlaceholder": "script, writer, research",
+  "settings.rooms.pins": "Fijaciones de tipo de agente",
+  "settings.rooms.pinsHint":
+    "Fija un subagent_type exacto a una sala — se comprueba antes que las palabras clave, para tipos que no deberían enrutarse por palabra clave.",
+  "settings.rooms.addPin": "+ Agregar fijación",
+  "settings.rooms.pinAgentType": "Tipo de agente",
+  "settings.rooms.pinAgentTypePlaceholder": "general-purpose",
+  "settings.rooms.pinRoom": "Sala",
+  "settings.rooms.removePin": "Eliminar",
+  "settings.rooms.noPins": "No hay fijaciones configuradas",
+  "settings.rooms.save": "Guardar",
+  "settings.rooms.saving": "Guardando...",
+  "settings.rooms.saved": "¡Guardado!",
+  "settings.rooms.saveFailed": "Error al guardar: {status} {statusText}",
+  "settings.rooms.saveUnreachable":
+    "No se puede conectar con el servidor — ¿está en ejecución?",
+  "settings.rooms.unsavedWarning":
+    "Tienes cambios sin guardar en las salas. ¿Descartarlos?",
 
   // Sessions
   "sessions.title": "Sesiones",

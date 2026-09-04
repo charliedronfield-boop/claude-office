@@ -170,11 +170,23 @@ def _validate_room_config(value: str) -> None:
         raise HTTPException(status_code=400, detail=f"Invalid room_config: {exc}") from exc
 
     unknown = [entry.id for entry in overrides.rooms if entry.id not in SLOT_IDS]
+    unknown += [
+        entry.room_id for entry in overrides.agent_type_overrides if entry.room_id not in SLOT_IDS
+    ]
     if unknown:
         raise HTTPException(
             status_code=400,
             detail=(
                 f"Invalid room_config: unknown room id(s) {unknown}, "
                 f"expected one of {list(SLOT_IDS)}"
+            ),
+        )
+
+    empty_pins = [entry for entry in overrides.agent_type_overrides if not entry.agent_type.strip()]
+    if empty_pins:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid room_config: agentTypeOverrides entries must have a non-empty agentType"
             ),
         )

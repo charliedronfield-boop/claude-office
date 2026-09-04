@@ -99,6 +99,30 @@ const en = {
   "settings.building.saveFailed": "Save failed: {status} {statusText}",
   "settings.building.saveUnreachable":
     "Cannot reach backend — is the server running?",
+  "settings.tabs.rooms": "Rooms",
+  "settings.rooms.hint":
+    "Rename the four role rooms, recolor them, or change which subagent_type keywords route into each one.",
+  "settings.rooms.roomName": "Room Name",
+  "settings.rooms.accentColor": "Accent",
+  "settings.rooms.keywords": "Routing keywords",
+  "settings.rooms.keywordsPlaceholder": "script, writer, research",
+  "settings.rooms.pins": "Agent-type pins",
+  "settings.rooms.pinsHint":
+    "Pin an exact subagent_type to a room — checked before keyword matching, for types that shouldn't be keyword-routed.",
+  "settings.rooms.addPin": "+ Add pin",
+  "settings.rooms.pinAgentType": "Agent type",
+  "settings.rooms.pinAgentTypePlaceholder": "general-purpose",
+  "settings.rooms.pinRoom": "Room",
+  "settings.rooms.removePin": "Remove",
+  "settings.rooms.noPins": "No pins configured",
+  "settings.rooms.save": "Save",
+  "settings.rooms.saving": "Saving...",
+  "settings.rooms.saved": "Saved!",
+  "settings.rooms.saveFailed": "Save failed: {status} {statusText}",
+  "settings.rooms.saveUnreachable":
+    "Cannot reach backend — is the server running?",
+  "settings.rooms.unsavedWarning":
+    "You have unsaved room changes. Discard them?",
 
   // Sessions
   "sessions.title": "Sessions",

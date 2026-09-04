@@ -18,6 +18,7 @@ import { useWebSocketEvents } from "@/hooks/useWebSocketEvents";
 import { useSessions } from "@/hooks/useSessions";
 import { useSessionSwitch } from "@/hooks/useSessionSwitch";
 import { useFloorConfig } from "@/hooks/useFloorConfig";
+import { useRoomConfig } from "@/hooks/useRoomConfig";
 import {
   useGameStore,
   selectIsConnected,
@@ -177,6 +178,7 @@ export default function V2TestPage(): React.ReactNode {
   // Floor config + tour initialization
   // ------------------------------------------------------------------
   useFloorConfig();
+  useRoomConfig();
 
   // Watch for edit-building requests from BuildingView. Subscribe to the
   // store so the modal-opening setState runs in an event callback (the store

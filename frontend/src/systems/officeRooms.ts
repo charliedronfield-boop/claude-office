@@ -110,6 +110,12 @@ export function getRoomForDesk(desk: number | null): Room | null {
   return desk === null ? null : (ROOM_BY_DESK.get(desk) ?? null);
 }
 
+/** "#rrggbb" (roomConfigStore's wire format) -> a PixiJS 0xrrggbb color, or null if malformed. */
+export function parseHexColor(hex: string): number | null {
+  const match = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  return match ? Number.parseInt(match[1], 16) : null;
+}
+
 /** Vertical partitions plus the bottom wall, as tile rectangles. */
 export const WALL_TILE_RECTS: TileRect[] = [
   ...WALL_GX.map((gx) => ({

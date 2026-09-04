@@ -101,6 +101,30 @@ const ptBR: Record<TranslationKey, string> = {
   "settings.building.saveFailed": "Falha ao salvar: {status} {statusText}",
   "settings.building.saveUnreachable":
     "Não foi possível conectar ao servidor — ele está em execução?",
+  "settings.tabs.rooms": "Salas",
+  "settings.rooms.hint":
+    "Renomeie as quatro salas de função, recolora-as ou altere quais palavras-chave de subagent_type roteiam para cada uma.",
+  "settings.rooms.roomName": "Nome da Sala",
+  "settings.rooms.accentColor": "Cor",
+  "settings.rooms.keywords": "Palavras-chave de roteamento",
+  "settings.rooms.keywordsPlaceholder": "script, writer, research",
+  "settings.rooms.pins": "Fixações de tipo de agente",
+  "settings.rooms.pinsHint":
+    "Fixa um subagent_type exato a uma sala — verificado antes da correspondência por palavra-chave, para tipos que não devem ser roteados por palavra-chave.",
+  "settings.rooms.addPin": "+ Adicionar fixação",
+  "settings.rooms.pinAgentType": "Tipo de agente",
+  "settings.rooms.pinAgentTypePlaceholder": "general-purpose",
+  "settings.rooms.pinRoom": "Sala",
+  "settings.rooms.removePin": "Remover",
+  "settings.rooms.noPins": "Nenhuma fixação configurada",
+  "settings.rooms.save": "Salvar",
+  "settings.rooms.saving": "Salvando...",
+  "settings.rooms.saved": "Salvo!",
+  "settings.rooms.saveFailed": "Falha ao salvar: {status} {statusText}",
+  "settings.rooms.saveUnreachable":
+    "Não foi possível conectar ao servidor — ele está em execução?",
+  "settings.rooms.unsavedWarning":
+    "Você tem alterações não salvas nas salas. Descartá-las?",
 
   // Sessions
   "sessions.title": "Sessões",

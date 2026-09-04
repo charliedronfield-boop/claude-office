@@ -3,6 +3,7 @@
 from app.core.office_rooms import (
     ALL_DESKS,
     DEFAULT_ROOMS,
+    AgentTypeOverride,
     RoomConfigOverrides,
     RoomOverride,
     apply_overrides,
@@ -130,6 +131,43 @@ class TestRoomOverrides:
         payload = '{"rooms":[{"id":"editing","name":"Post"}]}'
         overrides = RoomConfigOverrides.from_json(payload)
         assert overrides.rooms == [RoomOverride(id="editing", name="Post")]
+
+
+class TestAgentTypePins:
+    def test_pin_wins_over_keyword_match(self) -> None:
+        # "general-purpose" matches no room's keywords by default, so an
+        # unpinned call falls back to the emptiest room (scripting, empty).
+        assert resolve_room("general-purpose", agent_type_pins={}) == "scripting"
+        assert (
+            resolve_room("general-purpose", agent_type_pins={"general-purpose": "publishing"})
+            == "publishing"
+        )
+
+    def test_pin_match_is_case_insensitive_and_trims_whitespace(self) -> None:
+        pins = {"general-purpose": "editing"}
+        assert resolve_room("General-Purpose", agent_type_pins=pins) == "editing"
+        assert resolve_room("  general-purpose  ", agent_type_pins=pins) == "editing"
+
+    def test_pin_referencing_a_room_outside_active_rooms_is_ignored(self) -> None:
+        # Defensive: active_rooms restricted to a subset that excludes the
+        # pin's target should fall through to the keyword/emptiest-room path
+        # rather than returning a room id the caller didn't offer.
+        restricted = tuple(r for r in DEFAULT_ROOMS if r.id != "publishing")
+        result = resolve_room(
+            "general-purpose",
+            rooms=restricted,
+            agent_type_pins={"general-purpose": "publishing"},
+        )
+        assert result in {r.id for r in restricted}
+
+    def test_json_round_trip_includes_agent_type_overrides(self) -> None:
+        payload = (
+            '{"rooms":[],"agentTypeOverrides":[{"agentType":"general-purpose","roomId":"editing"}]}'
+        )
+        overrides = RoomConfigOverrides.from_json(payload)
+        assert overrides.agent_type_overrides == [
+            AgentTypeOverride(agent_type="general-purpose", room_id="editing")
+        ]
 
 
 class TestCachedRooms:
